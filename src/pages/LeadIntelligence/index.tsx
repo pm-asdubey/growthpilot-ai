@@ -1,7 +1,20 @@
-import { AlertTriangle, CheckCircle, Loader2, RefreshCw, TrendingUp } from 'lucide-react'
+import {
+  AlertTriangle,
+  CheckCircle,
+  Loader2,
+  RefreshCw,
+  Sparkles,
+  TrendingUp,
+  Users,
+  Zap,
+} from 'lucide-react'
 import { MetricCard } from '@/components/common/MetricCard'
 import { PageHeader } from '@/components/common/PageHeader'
 import { SectionCard } from '@/components/common/SectionCard'
+import { ConversionTrendChart } from '@/components/charts/ConversionTrendChart'
+import { FeatureImportanceChart } from '@/components/charts/FeatureImportanceChart'
+import { LeadScoreHistogram } from '@/components/charts/LeadScoreHistogram'
+import { SegmentPieChart } from '@/components/charts/SegmentPieChart'
 import { CSVDropzone } from '@/components/upload/CSVDropzone'
 import {
   ValidationChecklist,
@@ -12,6 +25,8 @@ import { useAnalysis } from '@/hooks/useAnalysis'
 import { useCSVUpload } from '@/hooks/useCSVUpload'
 import { REQUIRED_COLUMNS } from '@/types/lead'
 import type { ValidationCheck } from '@/types/validation'
+
+// ── Checklist builder ────────────────────────────────────────────────────────
 
 function buildChecklist(
   uploadState: string,
@@ -27,7 +42,9 @@ function buildChecklist(
   const checks: ValidationCheck[] = [
     {
       label: 'File is a valid CSV',
-      status: isPending ? 'pending' : errors.some((e) => e.code === 'PARSE_ERROR') ? 'fail' : 'pass',
+      status: isPending
+        ? 'pending'
+        : errors.some((e) => e.code === 'PARSE_ERROR') ? 'fail' : 'pass',
     },
     {
       label: 'File contains at least one row',
@@ -71,9 +88,7 @@ function buildChecklist(
   return checks
 }
 
-function formatNumber(n: number): string {
-  return n.toLocaleString()
-}
+// ── Page ─────────────────────────────────────────────────────────────────────
 
 export function LeadIntelligencePage() {
   const { uploadState, fileName, validationResult, leads, error, handleFileSelected, reset } =
@@ -92,6 +107,7 @@ export function LeadIntelligencePage() {
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-8">
+
       {/* Page header */}
       <div className="flex items-start justify-between gap-4">
         <PageHeader
@@ -111,19 +127,24 @@ export function LeadIntelligencePage() {
         )}
       </div>
 
-      {/* ── Idle: dropzone ── */}
+      {/* ── Idle ── */}
       {isIdle && (
         <SectionCard>
           <div className="space-y-8">
             <CSVDropzone onFileSelected={handleFileSelected} />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {HOW_IT_WORKS.map((step) => (
-                <div key={step.title} className="rounded-[10px] border border-border bg-background p-4">
+                <div
+                  key={step.title}
+                  className="rounded-[10px] border border-border bg-background p-4"
+                >
                   <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-[13px] font-bold text-primary">
                     {step.number}
                   </div>
                   <p className="text-[13px] font-semibold text-foreground">{step.title}</p>
-                  <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">{step.description}</p>
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
+                    {step.description}
+                  </p>
                 </div>
               ))}
             </div>
@@ -141,9 +162,16 @@ export function LeadIntelligencePage() {
               <ValidationChecklist checks={checks} />
             )}
             {isUploadError && error && !validationResult && (
-              <div role="alert" className="rounded-[10px] border border-error/30 bg-error/5 p-4 text-[13px] text-error">
+              <div
+                role="alert"
+                className="rounded-[10px] border border-error/30 bg-error/5 p-4 text-[13px] text-error"
+              >
                 {error}
-                <button type="button" onClick={reset} className="ml-3 font-medium underline underline-offset-2 hover:no-underline focus-visible:outline-none">
+                <button
+                  type="button"
+                  onClick={reset}
+                  className="ml-3 font-medium underline underline-offset-2 hover:no-underline focus-visible:outline-none"
+                >
                   Try again
                 </button>
               </div>
@@ -159,7 +187,7 @@ export function LeadIntelligencePage() {
         </SectionCard>
       )}
 
-      {/* ── Upload ready: show validation pass + analysis ── */}
+      {/* ── Validation passed ── */}
       {isUploadReady && validationResult && (
         <SectionCard title="Dataset Validation" description={fileName ?? undefined}>
           <div className="space-y-4">
@@ -168,7 +196,7 @@ export function LeadIntelligencePage() {
               <CheckCircle size={16} className="shrink-0 text-success" aria-hidden="true" />
               <p className="text-[13px] font-medium text-success">
                 Validation passed —{' '}
-                <span className="font-bold">{formatNumber(validationResult.rowCount)} leads</span>{' '}
+                <span className="font-bold">{validationResult.rowCount.toLocaleString()} leads</span>{' '}
                 ready for analysis.
               </p>
             </div>
@@ -189,12 +217,19 @@ export function LeadIntelligencePage() {
       {/* ── Analytics error ── */}
       {isAnalysisError && (
         <SectionCard title="Analytics Engine">
-          <div role="alert" className="flex items-start gap-3 rounded-[10px] border border-error/30 bg-error/5 p-4">
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-[10px] border border-error/30 bg-error/5 p-4"
+          >
             <AlertTriangle size={18} className="mt-0.5 shrink-0 text-error" aria-hidden="true" />
             <div className="space-y-2">
               <p className="text-[14px] font-medium text-foreground">Analytics engine error</p>
               <p className="text-[13px] text-muted-foreground">{analysisError}</p>
-              <button type="button" onClick={reset} className="text-[13px] font-medium text-primary underline underline-offset-2 hover:no-underline focus-visible:outline-none">
+              <button
+                type="button"
+                onClick={reset}
+                className="text-[13px] font-medium text-primary underline underline-offset-2 hover:no-underline focus-visible:outline-none"
+              >
                 Start over
               </button>
             </div>
@@ -202,38 +237,44 @@ export function LeadIntelligencePage() {
         </SectionCard>
       )}
 
-      {/* ── Analysis complete: KPIs ── */}
+      {/* ── Analysis complete ── */}
       {isAnalysisDone && (
         <>
           {/* KPI cards */}
-          <section aria-labelledby="analysis-kpis-heading">
-            <h2 id="analysis-kpis-heading" className="mb-4 text-[18px] font-semibold text-foreground">
+          <section aria-labelledby="kpi-heading">
+            <h2 id="kpi-heading" className="mb-4 text-[18px] font-semibold text-foreground">
               Key Metrics
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 title="Total Leads"
-                value={formatNumber(analysisResult.kpis.totalLeads)}
-                icon={TrendingUp}
+                value={analysisResult.kpis.totalLeads.toLocaleString()}
+                icon={Users}
               />
               <MetricCard
                 title="Converted Leads"
-                value={formatNumber(analysisResult.kpis.convertedLeads)}
-                trend={{ direction: 'neutral', label: `of ${formatNumber(analysisResult.kpis.totalLeads)} total` }}
+                value={analysisResult.kpis.convertedLeads.toLocaleString()}
+                icon={CheckCircle}
+                trend={{
+                  direction: 'neutral',
+                  label: `of ${analysisResult.kpis.totalLeads.toLocaleString()} total`,
+                }}
               />
               <MetricCard
                 title="Conversion Rate"
                 value={`${String(analysisResult.kpis.conversionRate)}%`}
+                icon={TrendingUp}
               />
               <MetricCard
                 title="Avg Lead Score"
                 value={String(analysisResult.kpis.averageLeadScore)}
+                icon={Zap}
                 trend={{ direction: 'neutral', label: 'out of 100' }}
               />
             </div>
           </section>
 
-          {/* Segment summary */}
+          {/* Segment badges */}
           <section aria-labelledby="segment-heading">
             <h2 id="segment-heading" className="mb-4 text-[18px] font-semibold text-foreground">
               Lead Segments
@@ -241,78 +282,53 @@ export function LeadIntelligencePage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <SegmentBadge
                 label="SQL"
+                subtitle="Sales Qualified Lead"
                 count={analysisResult.kpis.sqlCount}
                 total={analysisResult.kpis.totalLeads}
                 threshold={analysisResult.segments.sqlThreshold}
-                colour="text-primary bg-primary/10 border-primary/20"
+                className="border-primary/20 bg-primary/5 text-primary"
               />
               <SegmentBadge
                 label="MQL"
+                subtitle="Marketing Qualified Lead"
                 count={analysisResult.kpis.mqlCount}
                 total={analysisResult.kpis.totalLeads}
                 threshold={analysisResult.segments.mqlThreshold}
-                colour="text-warning bg-warning/10 border-warning/20"
+                className="border-warning/20 bg-warning/5 text-warning"
               />
               <SegmentBadge
                 label="Nurture"
+                subtitle="Requires further engagement"
                 count={analysisResult.kpis.nurtureCount}
                 total={analysisResult.kpis.totalLeads}
                 threshold={0}
-                colour="text-muted-foreground bg-muted border-border"
+                className="border-border bg-muted text-muted-foreground"
               />
             </div>
           </section>
 
-          {/* Feature importance table */}
-          <SectionCard
-            title="Feature Importance"
-            description="Which signals most strongly predict conversion in your dataset."
-          >
-            <div className="space-y-3">
-              {analysisResult.featureImportance.map((fi, i) => (
-                <div key={fi.feature} className="flex items-center gap-4">
-                  <span className="w-4 shrink-0 text-[12px] text-muted-foreground">{i + 1}</span>
-                  <span className="w-40 shrink-0 text-[13px] font-medium text-foreground">{fi.label}</span>
-                  <div className="flex-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-                    <div
-                      className="h-2 rounded-full bg-primary transition-all duration-500"
-                      style={{ width: `${String(fi.importance)}%` }}
-                    />
-                  </div>
-                  <span className="w-10 shrink-0 text-right text-[13px] font-semibold text-foreground">
-                    {fi.importance}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
-
-          {/* Charts placeholder — Phase 5 */}
-          <SectionCard
-            title="Analytics Charts"
-            description="Interactive charts will be rendered here in Phase 5."
-          >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {analysisResult.charts.featureImportance.length > 0 && (
-                <ChartPlaceholder
-                  title="Feature Importance"
-                  detail={`${String(analysisResult.charts.featureImportance.length)} features ranked`}
-                />
-              )}
-              <ChartPlaceholder
-                title="Lead Score Distribution"
-                detail={`${String(analysisResult.leadScores.length)} leads scored`}
+          {/* Charts — 2-column grid on desktop */}
+          <section aria-labelledby="charts-heading">
+            <h2 id="charts-heading" className="mb-4 text-[18px] font-semibold text-foreground">
+              Analytics
+            </h2>
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              <FeatureImportanceChart data={analysisResult.charts.featureImportance} />
+              <LeadScoreHistogram
+                data={analysisResult.charts.leadScoreHistogram}
+                sqlThreshold={analysisResult.segments.sqlThreshold}
+                mqlThreshold={analysisResult.segments.mqlThreshold}
               />
-              <ChartPlaceholder
-                title="SQL / MQL / Nurture"
-                detail={`${String(analysisResult.segments.sql.length)} SQL · ${String(analysisResult.segments.mql.length)} MQL`}
+              <SegmentPieChart
+                data={analysisResult.charts.segmentDistribution}
+                totalLeads={analysisResult.kpis.totalLeads}
               />
-              <ChartPlaceholder
-                title="Conversion Trend"
-                detail={`${String(analysisResult.charts.conversionTrend.length)} time buckets`}
+              <ConversionTrendChart
+                data={analysisResult.charts.conversionTrend}
+                conversionRate={analysisResult.kpis.conversionRate}
               />
             </div>
-          </SectionCard>
+          </section>
 
           {/* AI insights placeholder — Phase 6 */}
           <SectionCard
@@ -321,10 +337,11 @@ export function LeadIntelligencePage() {
           >
             <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <TrendingUp size={22} className="text-primary" aria-hidden="true" />
+                <Sparkles size={22} className="text-primary" aria-hidden="true" />
               </div>
-              <p className="text-[14px] text-muted-foreground max-w-sm">
-                Analytics complete. The AI insights panel will be wired to the NVIDIA API in Phase 6.
+              <p className="max-w-sm text-[14px] text-muted-foreground">
+                Analytics complete. Connect the NVIDIA AI API in Phase 6 to generate an executive
+                summary, recommendations, and risk analysis.
               </p>
             </div>
           </SectionCard>
@@ -334,36 +351,28 @@ export function LeadIntelligencePage() {
   )
 }
 
-// ── Small local sub-components ────────────────────────────────────────────────
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 interface SegmentBadgeProps {
   label: string
+  subtitle: string
   count: number
   total: number
   threshold: number
-  colour: string
+  className: string
 }
 
-function SegmentBadge({ label, count, total, threshold, colour }: SegmentBadgeProps) {
+function SegmentBadge({ label, subtitle, count, total, threshold, className }: SegmentBadgeProps) {
   const pct = total === 0 ? 0 : Math.round((count / total) * 100)
   return (
-    <div className={`rounded-[12px] border p-5 ${colour}`}>
-      <p className="text-[13px] font-semibold uppercase tracking-wide">{label}</p>
-      <p className="mt-1 text-[28px] font-bold leading-none">{count.toLocaleString()}</p>
-      <p className="mt-1 text-[12px] opacity-80">
+    <div className={`rounded-[12px] border p-5 ${className}`}>
+      <p className="text-[12px] font-semibold uppercase tracking-wider">{label}</p>
+      <p className="mt-0.5 text-[11px] opacity-70">{subtitle}</p>
+      <p className="mt-3 text-[32px] font-bold leading-none">{count.toLocaleString()}</p>
+      <p className="mt-1.5 text-[12px] opacity-70">
         {pct}% of total
         {threshold > 0 && <> · score ≥ {threshold}</>}
       </p>
-    </div>
-  )
-}
-
-function ChartPlaceholder({ title, detail }: { title: string; detail: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-[10px] border border-dashed border-border bg-background py-10 text-center">
-      <p className="text-[14px] font-semibold text-foreground">{title}</p>
-      <p className="text-[12px] text-muted-foreground">{detail}</p>
-      <p className="text-[11px] text-muted-foreground/60">Chart renders in Phase 5</p>
     </div>
   )
 }
@@ -372,16 +381,19 @@ const HOW_IT_WORKS = [
   {
     number: '1',
     title: 'Upload & Validate',
-    description: 'Drop in your CSV. Required columns, data types, and missing values are checked instantly.',
+    description:
+      'Drop in your CSV. Required columns, data types, and missing values are checked instantly.',
   },
   {
     number: '2',
     title: 'Analytics Engine',
-    description: 'Deterministic algorithms calculate conversion rates, feature importance, and lead scores.',
+    description:
+      'Deterministic algorithms calculate conversion rates, feature importance, and lead scores.',
   },
   {
     number: '3',
     title: 'AI Insights',
-    description: 'An executive summary, business recommendations, and risk analysis are generated from your results.',
+    description:
+      'An executive summary, business recommendations, and risk analysis are generated from your results.',
   },
 ]
