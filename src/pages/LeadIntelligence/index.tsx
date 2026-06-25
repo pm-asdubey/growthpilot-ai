@@ -3,7 +3,6 @@ import {
   CheckCircle,
   Loader2,
   RefreshCw,
-  Sparkles,
   TrendingUp,
   Users,
   Zap,
@@ -15,12 +14,18 @@ import { ConversionTrendChart } from '@/components/charts/ConversionTrendChart'
 import { FeatureImportanceChart } from '@/components/charts/FeatureImportanceChart'
 import { LeadScoreHistogram } from '@/components/charts/LeadScoreHistogram'
 import { SegmentPieChart } from '@/components/charts/SegmentPieChart'
+import {
+  AIInsightsPanelError,
+  AIInsightsPanelLoading,
+  AIInsightsPanelReady,
+} from '@/components/insights/AIInsightsPanel'
 import { CSVDropzone } from '@/components/upload/CSVDropzone'
 import {
   ValidationChecklist,
   ValidationChecklistSkeleton,
 } from '@/components/upload/ValidationChecklist'
 import { ValidationErrorPanel } from '@/components/upload/ValidationErrorPanel'
+import { useAIInsights } from '@/hooks/useAIInsights'
 import { useAnalysis } from '@/hooks/useAnalysis'
 import { useCSVUpload } from '@/hooks/useCSVUpload'
 import { REQUIRED_COLUMNS } from '@/types/lead'
@@ -94,6 +99,9 @@ export function LeadIntelligencePage() {
   const { uploadState, fileName, validationResult, leads, error, handleFileSelected, reset } =
     useCSVUpload()
   const { analysisState, analysisResult, error: analysisError } = useAnalysis(leads)
+  const { insightState, insights, error: insightError, retry: retryInsights } = useAIInsights(
+    analysisState === 'done' && analysisResult ? analysisResult.aiPayload : null,
+  )
 
   const isIdle = uploadState === 'idle'
   const isUploadProcessing = uploadState === 'parsing' || uploadState === 'validating'
@@ -330,21 +338,14 @@ export function LeadIntelligencePage() {
             </div>
           </section>
 
-          {/* AI insights placeholder — Phase 6 */}
-          <SectionCard
-            title="AI Executive Summary"
-            description="AI-generated insights will appear here after Phase 6 integration."
-          >
-            <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <Sparkles size={22} className="text-primary" aria-hidden="true" />
-              </div>
-              <p className="max-w-sm text-[14px] text-muted-foreground">
-                Analytics complete. Connect the NVIDIA AI API in Phase 6 to generate an executive
-                summary, recommendations, and risk analysis.
-              </p>
-            </div>
-          </SectionCard>
+          {/* AI insights */}
+          {insightState === 'loading' && <AIInsightsPanelLoading />}
+          {insightState === 'error' && (
+            <AIInsightsPanelError error={insightError ?? 'Unknown error'} onRetry={retryInsights} />
+          )}
+          {insightState === 'done' && insights && (
+            <AIInsightsPanelReady insights={insights} />
+          )}
         </>
       )}
     </div>
