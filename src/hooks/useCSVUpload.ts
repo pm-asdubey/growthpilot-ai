@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import Papa from 'papaparse'
 import { extractCategoricalData, getFeatureColumns, mapRowsToLeads, normalizeRows } from '@/services/analytics/mapper'
-import { detectCategoricalColumns, getMissingKnownColumns, validateDataset } from '@/services/analytics/validator'
+import { detectBooleanColumns, detectCategoricalColumns, getMissingKnownColumns, validateDataset } from '@/services/analytics/validator'
 import type { Lead } from '@/types/lead'
 import type { ValidationResult } from '@/types/validation'
 
@@ -68,10 +68,11 @@ export function useCSVUpload(): CSVUploadState & CSVUploadActions {
           }
 
           const featureColumns = getFeatureColumns(lowerHeaders, rows)
+          const booleanColumns = detectBooleanColumns(lowerHeaders, rows)
           const categoricalColumns = detectCategoricalColumns(lowerHeaders, rows)
           const categoricalData = extractCategoricalData(rows, categoricalColumns)
           const missingKnownColumns = getMissingKnownColumns(headers)
-          const leads = mapRowsToLeads(rows, featureColumns)
+          const leads = mapRowsToLeads(rows, featureColumns, booleanColumns)
 
           setState((prev) => ({
             ...prev,

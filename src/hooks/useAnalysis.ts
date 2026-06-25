@@ -49,7 +49,7 @@ export function useAnalysis(
       const leadScores = calculateLeadScores(leads, featureImportance)
       const segments = classifySegments(leads, leadScores, segmentConfig)
       const kpis = generateKPIs(conversion, segments, leadScores)
-      const charts = generateChartData(featureImportance, leadScores, segments, conversion)
+      const charts = generateChartData(featureImportance, leadScores, conversion)
       const categoricalBreakdown = analyzeCategoricalFeatures(categoricalData, leads, segments, categoricalColumns)
       const featureBuckets = analyzeFeatureBuckets(leads, segments, featureImportance)
       const aiPayload = buildAIPayload(kpis, featureImportance, categoricalBreakdown, featureBuckets)

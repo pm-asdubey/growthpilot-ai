@@ -6,7 +6,6 @@ import { FormulaTooltip } from '@/components/common/FormulaTooltip'
 import { ConversionTrendChart } from '@/components/charts/ConversionTrendChart'
 import { FeatureImportanceChart } from '@/components/charts/FeatureImportanceChart'
 import { LeadScoreHistogram } from '@/components/charts/LeadScoreHistogram'
-import { SegmentPieChart } from '@/components/charts/SegmentPieChart'
 import {
   AIInsightsPanelError,
   AIInsightsPanelLoading,
@@ -109,7 +108,7 @@ export function AnalysisResults({
                 'Total Leads: row count in your CSV.',
                 'Converted Leads: rows where converted = 1.',
                 'Conversion Rate = (Converted ÷ Total) × 100, rounded to 1 decimal.',
-                'Avg Lead Score = mean of all individual 0–100 lead scores (all leads).',
+                'Avg Lead Score = mean score across your OPEN leads only — already-converted leads are excluded so this reflects your current pipeline, not history.',
               ]} />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -183,14 +182,14 @@ export function AnalysisResults({
             />
           )}
 
-          {/* Charts */}
+          {/* Charts — segment counts already shown clearly above as badges,
+              so there's no separate pie chart here repeating the same 4 numbers. */}
           <section aria-labelledby="charts-heading">
             <h2 id="charts-heading" className="mb-4 text-[18px] font-semibold text-foreground">Analytics</h2>
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
               <FeatureImportanceChart data={analysisResult.charts.featureImportance} />
               <LeadScoreHistogram data={analysisResult.charts.leadScoreHistogram}
                 sqlThreshold={analysisResult.segments.sqlThreshold} mqlThreshold={analysisResult.segments.mqlThreshold} />
-              <SegmentPieChart data={analysisResult.charts.segmentDistribution} totalLeads={analysisResult.kpis.totalLeads} />
               <ConversionTrendChart data={analysisResult.charts.conversionTrend} conversionRate={analysisResult.kpis.conversionRate} />
             </div>
           </section>
@@ -202,6 +201,7 @@ export function AnalysisResults({
                 <h2 id="buckets-heading" className="text-[18px] font-semibold text-foreground">Feature Value Ranges</h2>
                 <FormulaTooltip title="Feature Value Ranges" lines={[
                   'Leads are sorted by each feature\'s value and split into 4 equal-sized groups.',
+                  'Yes/No features (e.g. webinar attended) show exactly 2 rows instead — a true/false signal isn\'t a range.',
                   'Conversion Rate = converted ÷ total leads in that range.',
                   'SQL Rate = SQL leads ÷ OPEN leads in that range — how likely an open lead in this range is to be top-priority.',
                   'This answers "what range of X should I prioritize?" with real numbers, not just an importance rank.',
@@ -225,6 +225,7 @@ export function AnalysisResults({
                   'Conversion Rate = converted ÷ total leads in that group.',
                   'SQL Rate = SQL leads ÷ OPEN leads in that group — which values are worth prioritizing right now.',
                   'Groups smaller than 3 leads are hidden — too small to be meaningful.',
+                  'Beyond the top 10 most common values, the rest are combined into a single weighted "Other" row — no leads are dropped, just grouped.',
                 ]} />
               </div>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

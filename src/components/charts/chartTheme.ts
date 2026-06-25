@@ -12,11 +12,3 @@ export const CHART_COLOURS = {
   text:       '#0F172A',
   textMuted:  '#64748B',
 } as const
-
-// Segment colours — consistent across pie chart and badges.
-export const SEGMENT_COLOURS: Record<string, string> = {
-  Converted: CHART_COLOURS.green,
-  SQL:       CHART_COLOURS.blue,
-  MQL:       CHART_COLOURS.amber,
-  Nurture:   CHART_COLOURS.slate,
-}

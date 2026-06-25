@@ -6,30 +6,31 @@ const TIMEOUT_MS = 60_000
 const ANALYZE_MAX_TOKENS = 1600
 const QUESTION_MAX_TOKENS = 400
 
-const SYSTEM_PROMPT = `You are a Marketing Operations analyst advising on which leads to prioritize. Always respond with ONLY a JSON object — no markdown, no explanation, no code fences.
+const SYSTEM_PROMPT = `You are a Marketing Operations strategist briefing a VP of Marketing. Always respond with ONLY a JSON object — no markdown, no explanation, no code fences.
 
-The data includes two breakdown arrays you must actually use, not ignore. Every row in both has two distinct numbers — do not confuse them:
-- conversionRate: % of ALL leads in that group (including already-converted ones) that converted historically. Use this for "what converts best" questions.
-- sqlRate: % of OPEN (not-yet-converted) leads in that group that are currently classified as SQL, the top-priority tier. Use this for "what should I prioritize right now" or "where should I focus" questions — it's about current pipeline, not history.
+Lead with the INSIGHT and what to DO about it. A number is supporting evidence, not the point — never write a sentence that is just a label and a percentage with no business meaning attached. Bad: "LinkedIn converts at 18%, the highest of any source." Good: "Referral and LinkedIn leads consistently outperform paid channels — worth shifting budget toward warm introductions instead of cold outbound." Use at most one number per sentence, only when it strengthens the point, and skip it entirely if the insight stands on its own.
 
-- categoricalBreakdown: for columns like Industry, Region, Lead Source — each entry lists every value with its conversionRate and sqlRate.
-- featureBuckets: for numeric columns like company size or page visits — each entry lists value ranges with conversionRate and sqlRate.
+Look for PATTERNS across multiple rows and across categoricalBreakdown AND featureBuckets together, not one isolated stat at a time — e.g. "your best leads share three traits: mid-size companies, webinar attendance, and a Referral source — that combination is your real ICP" is far more useful than three separate one-line stats. Treat the dataset like a strategist would: what's the one or two things this business should actually change, and why does the data support that.
 
-When asked or writing about "what converts best", look up the row with the highest conversionRate. When asked "what should I prioritize" or "where is my best open pipeline", look up the row with the highest sqlRate instead — these can point to different rows. Always quote the exact label and number from the row you used. Never guess or invent a value (e.g. never say "medium-sized companies" unless a row literally labeled that way is the one with the highest rate — quote the real range instead, e.g. "leads with 51–200 employees convert at 22%, the highest of any range"). If no breakdown array covers what was asked, say so explicitly rather than fabricating an answer.`
+The data includes two breakdown arrays:
+- categoricalBreakdown: for columns like Industry, Region, Lead Source — each entry lists every value with conversionRate (historical: did they convert) and sqlRate (current: are open leads with this value top-priority right now).
+- featureBuckets: same idea for numeric columns like company size or page visits, as value ranges instead of categories.
+
+Use conversionRate to talk about what has historically worked. Use sqlRate to talk about where to focus right now on open pipeline — these can point to different answers, so don't conflate them. Never invent a category, range, or number that isn't actually in the data — if you're not sure, say so rather than fabricating something that sounds plausible.`
 
 function buildAnalyzePrompt(payload: unknown): string {
-  return `Analyse these lead generation metrics and return a JSON object with this EXACT structure. All values must be plain strings or arrays of plain strings — no nested objects. Keep strings concise but always cite real numbers from the data (under 30 words is fine if it includes a number).
+  return `Analyse these lead generation metrics and return a JSON object with this EXACT structure. All values must be plain strings or arrays of plain strings — no nested objects. Write each item as a business insight with a clear "so what" — not a recitation of a single statistic.
 
 {
-  "executiveSummary": "2 sentences referencing specific numbers from kpis or dataset",
-  "keyFindings": ["finding citing a specific row's conversionRate from categoricalBreakdown or featureBuckets", "finding 2", "finding 3"],
-  "recommendations": ["recommendation citing a specific row's sqlRate — which segment to prioritize right now", "recommendation 2", "recommendation 3"],
-  "risks": ["risk 1", "risk 2"],
-  "nextActions": ["action 1", "action 2", "action 3"],
+  "executiveSummary": "2 sentences: the single biggest pattern in this data and why it matters",
+  "keyFindings": ["ONE pattern in plain language, with AT MOST one number — e.g. 'Mid-size companies convert far better than very small or very large ones' (not 'X% vs Y% vs Z%')", "finding 2", "finding 3"],
+  "recommendations": ["a concrete action grounded in the data — where to focus effort and why", "recommendation 2", "recommendation 3"],
+  "risks": ["a real risk this data reveals, in business terms", "risk 2"],
+  "nextActions": ["a specific next step", "action 2", "action 3"],
   "suggestedQuestions": ["question 1", "question 2", "question 3", "question 4"]
 }
 
-suggestedQuestions should be answerable using categoricalBreakdown or featureBuckets, e.g. "Which lead source converts best?" or "Which industry should I prioritize right now?".
+suggestedQuestions should be things a marketer would actually want to know next, e.g. "What does my ideal customer look like?" or "Where should I focus my outbound team this week?".
 
 Metrics:
 ${JSON.stringify(payload)}`
@@ -42,12 +43,12 @@ function buildQuestionPrompt(question: string, context: unknown, previousQA: Pre
     ? `\nPrevious questions already answered in this conversation:\n${previousQA.map((qa) => `Q: ${qa.question}\nA: ${qa.answer}`).join('\n')}\n`
     : ''
 
-  return `You are analysing a lead generation dataset with these metrics, including per-category and per-value-range breakdowns:
+  return `You are a Marketing Operations strategist analysing a lead generation dataset with these metrics, including per-category and per-value-range breakdowns:
 ${JSON.stringify(context)}
 ${history}
-Each breakdown row has conversionRate (historical: % of all leads in that group that converted) and sqlRate (current: % of OPEN leads in that group that are top-priority SQL). Use conversionRate for "what converts best" questions and sqlRate for "what should I prioritize / focus on now" questions — they can point to different answers.
+Each breakdown row has conversionRate (historical: did leads with this value convert) and sqlRate (current: are open leads with this value top-priority right now). Use conversionRate for "what converts best" questions and sqlRate for "what should I prioritize / focus on now" — they can point to different answers.
 
-Answer this new question (2-4 sentences). If it's about a category or feature, find the matching row in categoricalBreakdown or featureBuckets, pick whichever of conversionRate/sqlRate fits the question, and quote its exact label and number — do not guess:
+Answer this question in 2-4 sentences, written as a strategist's take, not a stat lookup: lead with what it means and what to do, using at most one supporting number from the data and only if it strengthens the point. If the question is about a category or feature, ground your answer in the matching row from categoricalBreakdown or featureBuckets — but don't just restate the row, explain why it matters. Never invent a number or category that isn't in the data:
 ${question}
 
 Return a JSON object with this EXACT structure:

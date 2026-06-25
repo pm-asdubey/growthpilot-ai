@@ -42,15 +42,23 @@ export function extractCategoricalData(
 
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'y'])
 
-export function mapRowToLead(row: Record<string, string>, featureColumns: string[]): Lead {
+// booleanColumns decides the type ONCE PER COLUMN (computed from the whole
+// dataset by detectBooleanColumns), not per cell. Guessing per cell would
+// misclassify a genuinely numeric count column's "0"/"1" rows as booleans
+// while its "2"/"5" rows stay numeric — silently mixed typing within one
+// column that corrupts both display (Yes/No mixed with raw numbers) and the
+// binary-vs-bucketed distinction downstream.
+export function mapRowToLead(
+  row: Record<string, string>,
+  featureColumns: string[],
+  booleanColumns: Set<string>,
+): Lead {
   const lead: Lead = { converted: parseBoolean(row.converted) }
 
   for (const col of featureColumns) {
     const raw = row[col].trim().toLowerCase()
-    if (TRUE_VALUES.has(raw)) {
-      lead[col] = true
-    } else if (raw === 'false' || raw === '0' || raw === 'no' || raw === 'n') {
-      lead[col] = 0
+    if (booleanColumns.has(col)) {
+      lead[col] = TRUE_VALUES.has(raw)
     } else {
       lead[col] = parseFloat(raw) || 0
     }
@@ -59,8 +67,12 @@ export function mapRowToLead(row: Record<string, string>, featureColumns: string
   return lead
 }
 
-export function mapRowsToLeads(rows: Record<string, string>[], featureColumns: string[]): Lead[] {
-  return rows.map((row) => mapRowToLead(row, featureColumns))
+export function mapRowsToLeads(
+  rows: Record<string, string>[],
+  featureColumns: string[],
+  booleanColumns: Set<string>,
+): Lead[] {
+  return rows.map((row) => mapRowToLead(row, featureColumns, booleanColumns))
 }
 
 function parseBoolean(value: string | undefined): boolean {

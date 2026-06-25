@@ -2,7 +2,6 @@ import type {
   ConversionTrendData,
   FeatureImportanceChartData,
   LeadScoreHistogramData,
-  SegmentDistributionData,
 } from './chart'
 
 export interface FeatureImportance {
@@ -58,7 +57,7 @@ export interface KPISet {
   convertedLeads: number
   openLeads: number          // totalLeads - convertedLeads — the leads SQL/MQL/Nurture apply to
   conversionRate: number     // Percentage, 2 decimal places
-  averageLeadScore: number   // Rounded integer, computed across all leads
+  averageLeadScore: number   // Rounded integer, OPEN leads only (excludes already-converted)
   sqlCount: number
   mqlCount: number
   nurtureCount: number
@@ -67,7 +66,6 @@ export interface KPISet {
 export interface ChartDataSet {
   featureImportance: FeatureImportanceChartData[]
   leadScoreHistogram: LeadScoreHistogramData[]
-  segmentDistribution: SegmentDistributionData[]
   conversionTrend: ConversionTrendData[]
 }
 

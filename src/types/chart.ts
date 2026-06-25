@@ -10,11 +10,6 @@ export interface LeadScoreHistogramData {
   count: number
 }
 
-export interface SegmentDistributionData {
-  label: 'Converted' | 'SQL' | 'MQL' | 'Nurture'
-  count: number
-}
-
 export interface ConversionTrendData {
   bucket: string      // e.g. "0–30 days"
   converted: number

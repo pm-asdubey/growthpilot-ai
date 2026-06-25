@@ -81,6 +81,23 @@ export function detectNumericColumns(headers: string[], rows: Record<string, str
   })
 }
 
+// Returns the subset of numeric feature columns that are actually boolean —
+// every value in the column (not just a sample) is from the boolean
+// vocabulary (0/1/true/false/yes/no). This must check the WHOLE column: a
+// genuinely numeric count column (e.g. invited_teammates: 0,1,2,5) also
+// contains "0" and "1", so per-cell guessing would misclassify those specific
+// rows as booleans while leaving the rest numeric — exactly the kind of mixed
+// typing that made bucket/value displays inconsistent.
+export function detectBooleanColumns(headers: string[], rows: Record<string, string>[]): Set<string> {
+  const numericCols = detectNumericColumns(headers, rows)
+  const booleanCols = new Set<string>()
+  for (const col of numericCols) {
+    const allBoolean = rows.every((row) => ACCEPTED_BOOLEAN_VALUES.has(row[col].trim().toLowerCase()))
+    if (allBoolean) booleanCols.add(col)
+  }
+  return booleanCols
+}
+
 // Advisory — used in the UI to show which known columns were not found.
 export function getMissingKnownColumns(headers: string[]): string[] {
   const lower = new Set(headers.map((h) => h.trim().toLowerCase()))
