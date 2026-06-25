@@ -57,6 +57,12 @@ export default tseslint.config(
     },
   },
 
+  // Build scripts — Node environment, no TypeScript strict rules needed
+  {
+    files: ['scripts/**/*.js'],
+    languageOptions: { globals: globals.node },
+  },
+
   // Disable formatting rules that Prettier owns
   prettierConfig,
 )
