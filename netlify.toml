@@ -9,6 +9,9 @@
 [functions]
   node_bundler = "esbuild"
 
+[functions."analyze"]
+  timeout = 30
+
 [dev]
   command     = "npm run dev"
   port        = 8888

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { GrowthPilotIcon, GrowthPilotLogo } from '@/components/common/GrowthPilotLogo'
 import type { NavItem } from '@/types/navigation'
 
 const primaryNav: NavItem[] = [
@@ -74,19 +75,8 @@ export function Sidebar({ isOpen, isCollapsed, onCollapse, onClose }: SidebarPro
             isCollapsed ? 'justify-center' : 'justify-between',
           )}
         >
-          {!isCollapsed && (
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-[12px] font-bold text-primary-foreground">
-                G
-              </span>
-              <span className="text-[15px] font-semibold text-foreground">GrowthPilot AI</span>
-            </div>
-          )}
-          {isCollapsed && (
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-[12px] font-bold text-primary-foreground">
-              G
-            </span>
-          )}
+          {!isCollapsed && <GrowthPilotLogo size="sm" />}
+          {isCollapsed && <GrowthPilotIcon size="sm" />}
           {/* Collapse toggle — desktop only */}
           <button
             type="button"

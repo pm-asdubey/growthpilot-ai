@@ -10,7 +10,7 @@ export type ValidationErrorCode =
 
 export interface ValidationError {
   code: ValidationErrorCode
-  message: string   // Human-readable — shown directly in the UI
+  message: string
   column?: string
 }
 
@@ -20,9 +20,8 @@ export interface ValidationResult {
   rowCount: number
 }
 
-// Drives the ValidationChecklist component — one entry per rule checked.
 export interface ValidationCheck {
   label: string
-  status: 'pending' | 'pass' | 'fail'
+  status: 'pending' | 'pass' | 'fail' | 'warn'
   message?: string
 }

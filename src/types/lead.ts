@@ -1,19 +1,16 @@
-// Typed representation of one row from the historical lead CSV.
-// Schema defined in DATASETS.md.
+// Lead is now flexible — any numeric/boolean column is a valid feature.
+// Only `converted` is structurally required (it is the classification target).
 export interface Lead {
-  employees: number
-  trial_users: number
-  pricing_page_visits: number
-  daily_active_users: number
-  invited_teammates: number
-  webinar_attended: boolean
-  support_tickets: number
-  days_since_signup: number
   converted: boolean
+  [featureName: string]: number | boolean
 }
 
-// Column names exactly as they must appear in the CSV header (case-insensitive match).
-export const REQUIRED_COLUMNS = [
+// The single required column.
+export const CONVERTED_COLUMN = 'converted' as const
+
+// Columns we know about from the original spec. Used for display labels and
+// as a hint during validation — but their absence is a warning, not an error.
+export const KNOWN_FEATURE_COLUMNS = [
   'employees',
   'trial_users',
   'pricing_page_visits',
@@ -22,7 +19,18 @@ export const REQUIRED_COLUMNS = [
   'webinar_attended',
   'support_tickets',
   'days_since_signup',
-  'converted',
 ] as const
 
-export type RequiredColumn = (typeof REQUIRED_COLUMNS)[number]
+export const KNOWN_FEATURE_LABELS: Record<string, string> = {
+  employees:            'Company Size',
+  trial_users:          'Trial Users',
+  pricing_page_visits:  'Pricing Page Visits',
+  daily_active_users:   'Daily Active Users',
+  invited_teammates:    'Invited Teammates',
+  webinar_attended:     'Webinar Attended',
+  support_tickets:      'Support Tickets',
+  days_since_signup:    'Days Since Signup',
+}
+
+// All expected columns (including the target) — used for legacy compatibility.
+export const REQUIRED_COLUMNS = [...KNOWN_FEATURE_COLUMNS, CONVERTED_COLUMN] as const

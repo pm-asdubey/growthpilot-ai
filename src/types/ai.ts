@@ -4,10 +4,11 @@ export interface AIResponse {
   recommendations: string[]
   risks: string[]
   nextActions: string[]
+  suggestedQuestions?: string[]
 }
 
 export interface AnalyzeAPIResponse {
   success: boolean
-  data?: AIResponse
+  data?: AIResponse | { answer: string }
   error?: string
 }

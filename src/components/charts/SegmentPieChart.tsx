@@ -19,6 +19,13 @@ export function SegmentPieChart({ data, totalLeads }: Props) {
     <ChartCard
       title="SQL / MQL / Nurture"
       description="Lead segment distribution"
+      formula={[
+        'Leads are sorted by score descending.',
+        'SQL (Sales Qualified): top 15% of leads by score — score ≥ 85th percentile.',
+        'MQL (Marketing Qualified): next 15% — score between 70th and 85th percentile.',
+        'Nurture: remaining 70% — score below 70th percentile.',
+        'Thresholds are computed from your actual dataset, not fixed values.',
+      ]}
     >
       <div className="flex items-center gap-6">
         <ResponsiveContainer width="100%" height={200}>

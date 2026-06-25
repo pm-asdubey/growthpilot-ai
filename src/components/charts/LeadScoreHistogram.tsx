@@ -32,6 +32,12 @@ export function LeadScoreHistogram({ data, sqlThreshold, mqlThreshold }: Props) 
     <ChartCard
       title="Lead Score Distribution"
       description="How scores are spread across your dataset"
+      formula={[
+        'Each feature value is min-max normalized to 0–1 across the dataset.',
+        'Score = Σ (normalized_value × feature_importance_weight) × 100',
+        'Result is clamped to 0–100 and rounded to the nearest integer.',
+        'Colour coding: Blue = SQL (top 15%), Amber = MQL (next 15%), Slate = Nurture.',
+      ]}
     >
       <ResponsiveContainer width="100%" height={240}>
         <BarChart data={chartData} margin={{ top: 0, right: 8, bottom: 0, left: -8 }}>

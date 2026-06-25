@@ -1,23 +1,8 @@
-import { REQUIRED_COLUMNS } from '@/types/lead'
+import { CONVERTED_COLUMN, KNOWN_FEATURE_COLUMNS } from '@/types/lead'
 import type { ValidationError, ValidationResult } from '@/types/validation'
 
 const MAX_ROWS = 10_000
-const MAX_BYTES = 25 * 1024 * 1024 // 25 MB
-
-// Numeric columns that must contain only finite numbers.
-const NUMERIC_COLUMNS = [
-  'employees',
-  'trial_users',
-  'pricing_page_visits',
-  'daily_active_users',
-  'invited_teammates',
-  'support_tickets',
-  'days_since_signup',
-] as const
-
-// Boolean column — must be 0, 1, "0", "1", "true", or "false" (case-insensitive).
-const BOOLEAN_COLUMNS = ['webinar_attended', 'converted'] as const
-
+const MAX_BYTES = 25 * 1024 * 1024
 const ACCEPTED_BOOLEAN_VALUES = new Set(['0', '1', 'true', 'false'])
 
 export function validateDataset(
@@ -26,13 +11,11 @@ export function validateDataset(
   fileSize: number,
 ): ValidationResult {
   const errors: ValidationError[] = []
+  const lowerHeaders = headers.map((h) => h.trim().toLowerCase())
 
   // 1. File size
   if (fileSize > MAX_BYTES) {
-    errors.push({
-      code: 'FILE_TOO_LARGE',
-      message: `File exceeds the 25 MB limit (${(fileSize / 1024 / 1024).toFixed(1)} MB uploaded).`,
-    })
+    errors.push({ code: 'FILE_TOO_LARGE', message: `File exceeds the 25 MB limit (${(fileSize / 1024 / 1024).toFixed(1)} MB).` })
     return { isValid: false, errors, rowCount: 0 }
   }
 
@@ -44,81 +27,61 @@ export function validateDataset(
 
   // 3. Row count limit
   if (rows.length > MAX_ROWS) {
-    errors.push({
-      code: 'TOO_MANY_ROWS',
-      message: `Dataset contains ${rows.length.toLocaleString()} rows. Maximum is 10,000 rows.`,
-    })
+    errors.push({ code: 'TOO_MANY_ROWS', message: `Dataset has ${rows.length.toLocaleString()} rows. Maximum is 10,000.` })
     return { isValid: false, errors, rowCount: rows.length }
   }
 
-  // 4. Duplicate headers (case-insensitive)
-  const lowerHeaders = headers.map((h) => h.trim().toLowerCase())
+  // 4. Duplicate headers
   const seen = new Set<string>()
   for (const h of lowerHeaders) {
     if (seen.has(h)) {
-      errors.push({
-        code: 'DUPLICATE_COLUMN',
-        message: `Duplicate column detected: "${h}". Each column name must be unique.`,
-        column: h,
-      })
+      errors.push({ code: 'DUPLICATE_COLUMN', message: `Duplicate column: "${h}".`, column: h })
     }
     seen.add(h)
   }
 
-  // 5. Required columns present
-  for (const col of REQUIRED_COLUMNS) {
-    if (!lowerHeaders.includes(col)) {
-      errors.push({
-        code: 'MISSING_COLUMN',
-        message: `Required column "${col}" was not found in the file.`,
-        column: col,
-      })
-    }
+  // 5. `converted` column is the only hard requirement
+  if (!lowerHeaders.includes(CONVERTED_COLUMN)) {
+    errors.push({ code: 'MISSING_COLUMN', message: `Required column "converted" was not found. This column must contain 0 or 1 values indicating whether each lead converted.`, column: CONVERTED_COLUMN })
   }
 
-  // Stop here if structural errors exist — type checks below would be misleading.
-  if (errors.length > 0) {
-    return { isValid: false, errors, rowCount: rows.length }
+  // Stop on structural errors
+  if (errors.length > 0) return { isValid: false, errors, rowCount: rows.length }
+
+  // 6. Validate `converted` values
+  const invalidConverted = rows.findIndex((row) => {
+    const val = row[CONVERTED_COLUMN].trim().toLowerCase()
+    return !val || !ACCEPTED_BOOLEAN_VALUES.has(val)
+  })
+  if (invalidConverted !== -1) {
+    errors.push({ code: 'INVALID_BOOLEAN', message: `"converted" must contain only 0 or 1. Invalid value on row ${String(invalidConverted + 2)}.`, column: CONVERTED_COLUMN })
   }
 
-  // 6. Data type checks.
-  // At this point all required columns are confirmed present, so row[col] is always a string.
-  for (const col of NUMERIC_COLUMNS) {
-    const invalidRow = rows.findIndex((row) => {
-      const raw = row[col].trim()
-      return raw === '' || !isFiniteNumeric(raw)
-    })
-    if (invalidRow !== -1) {
-      errors.push({
-        code: 'INVALID_TYPE',
-        message: `Column "${col}" must contain numeric values. Invalid value found on row ${String(invalidRow + 2)}.`,
-        column: col,
-      })
-    }
+  // 7. Check that at least 2 numeric/boolean feature columns exist
+  const detectedFeatures = detectNumericColumns(lowerHeaders, rows)
+  if (detectedFeatures.length < 1) {
+    errors.push({ code: 'MISSING_COLUMN', message: 'No numeric feature columns found. The dataset needs at least one numeric column besides "converted" to perform analysis.' })
   }
 
-  for (const col of BOOLEAN_COLUMNS) {
-    const invalidRow = rows.findIndex((row) => {
-      const raw = row[col].trim().toLowerCase()
-      return !ACCEPTED_BOOLEAN_VALUES.has(raw)
-    })
-    if (invalidRow !== -1) {
-      errors.push({
-        code: 'INVALID_BOOLEAN',
-        message: `Column "${col}" must contain only 0 or 1 values. Invalid value found on row ${String(invalidRow + 2)}.`,
-        column: col,
-      })
-    }
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-    rowCount: rows.length,
-  }
+  return { isValid: errors.length === 0, errors, rowCount: rows.length }
 }
 
-function isFiniteNumeric(value: string): boolean {
-  const n = Number(value)
-  return !isNaN(n) && isFinite(n)
+// Returns column names (excluding 'converted') that contain numeric or boolean values.
+export function detectNumericColumns(headers: string[], rows: Record<string, string>[]): string[] {
+  const sample = rows.slice(0, Math.min(20, rows.length))
+  return headers.filter((h) => {
+    if (h === CONVERTED_COLUMN) return false
+    // A column is numeric/boolean if all sampled values parse as a number or boolean
+    return sample.every((row) => {
+      const val = row[h].trim().toLowerCase()
+      if (!val) return false
+      return ACCEPTED_BOOLEAN_VALUES.has(val) || !isNaN(Number(val))
+    })
+  })
+}
+
+// Advisory — used in the UI to show which known columns were not found.
+export function getMissingKnownColumns(headers: string[]): string[] {
+  const lower = new Set(headers.map((h) => h.trim().toLowerCase()))
+  return KNOWN_FEATURE_COLUMNS.filter((c) => !lower.has(c))
 }

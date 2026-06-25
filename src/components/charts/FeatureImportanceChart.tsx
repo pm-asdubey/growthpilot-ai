@@ -27,6 +27,12 @@ export function FeatureImportanceChart({ data }: Props) {
     <ChartCard
       title="Feature Importance"
       description="Which signals most strongly predict conversion"
+      formula={[
+        'For each feature, calculate the mean value among converted leads and among non-converted leads.',
+        'Importance = |mean(converted) − mean(not converted)|',
+        'All raw scores are normalized so they sum to 100%.',
+        'Higher % = stronger separator between leads who converted and those who did not.',
+      ]}
     >
       <ResponsiveContainer width="100%" height={280}>
         <BarChart

@@ -24,7 +24,7 @@ export function useAIInsights(payload: AIRequestPayload | null): UseAIInsightsRe
 
     const result = await fetchInsights(p)
 
-    if (result.success && result.data) {
+    if (result.success && result.data && 'executiveSummary' in result.data) {
       setInsights(result.data)
       setInsightState('done')
     } else {

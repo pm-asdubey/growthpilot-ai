@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle, Loader2, TrendingUp, Users, Zap } from 'luc
 import { MetricCard } from '@/components/common/MetricCard'
 import { SectionCard } from '@/components/common/SectionCard'
 import { SegmentBadge } from '@/components/common/SegmentBadge'
+import { FormulaTooltip } from '@/components/common/FormulaTooltip'
 import { ConversionTrendChart } from '@/components/charts/ConversionTrendChart'
 import { FeatureImportanceChart } from '@/components/charts/FeatureImportanceChart'
 import { LeadScoreHistogram } from '@/components/charts/LeadScoreHistogram'
@@ -11,6 +12,7 @@ import {
   AIInsightsPanelLoading,
   AIInsightsPanelReady,
 } from '@/components/insights/AIInsightsPanel'
+import { AskAIPanel } from '@/components/insights/AskAIPanel'
 import type { AnalysisResult } from '@/types/analysis'
 import type { AIResponse } from '@/types/ai'
 import type { AnalysisState } from '@/hooks/useAnalysis'
@@ -70,7 +72,15 @@ export function AnalysisResults({
         <>
           {/* KPIs */}
           <section aria-labelledby="kpi-heading">
-            <h2 id="kpi-heading" className="mb-4 text-[18px] font-semibold text-foreground">Key Metrics</h2>
+            <div className="mb-4 flex items-center gap-2">
+              <h2 id="kpi-heading" className="text-[18px] font-semibold text-foreground">Key Metrics</h2>
+              <FormulaTooltip title="Key Metrics" lines={[
+                'Total Leads: row count in your CSV.',
+                'Converted Leads: rows where converted = 1.',
+                'Conversion Rate = (Converted ÷ Total) × 100, rounded to 1 decimal.',
+                'Avg Lead Score = mean of all individual 0–100 lead scores.',
+              ]} />
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard title="Total Leads" value={analysisResult.kpis.totalLeads.toLocaleString()} icon={Users} />
               <MetricCard title="Converted Leads" value={analysisResult.kpis.convertedLeads.toLocaleString()} icon={CheckCircle}
@@ -83,7 +93,16 @@ export function AnalysisResults({
 
           {/* Segments */}
           <section aria-labelledby="segment-heading">
-            <h2 id="segment-heading" className="mb-4 text-[18px] font-semibold text-foreground">Lead Segments</h2>
+            <div className="mb-4 flex items-center gap-2">
+              <h2 id="segment-heading" className="text-[18px] font-semibold text-foreground">Lead Segments</h2>
+              <FormulaTooltip title="Lead Segmentation" lines={[
+                'All leads are scored 0–100 using weighted feature importance.',
+                'SQL: top 15% by score (≥ 85th percentile).',
+                'MQL: next 15% by score (70th–85th percentile).',
+                'Nurture: remaining 70% (below 70th percentile).',
+                'Thresholds adapt to your dataset — they are not fixed values.',
+              ]} />
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <SegmentBadge label="SQL" subtitle="Sales Qualified Lead" count={analysisResult.kpis.sqlCount}
                 total={analysisResult.kpis.totalLeads} threshold={analysisResult.segments.sqlThreshold} variant="sql" />
@@ -112,6 +131,14 @@ export function AnalysisResults({
             <AIInsightsPanelError error={insightError ?? 'Unknown error'} onRetry={onRetryInsights} />
           )}
           {insightState === 'done' && insights && <AIInsightsPanelReady insights={insights} />}
+
+          {/* Ask AI */}
+          {(insightState === 'done' || insightState === 'error') && (
+            <AskAIPanel
+              context={analysisResult.aiPayload}
+              suggestedQuestions={insights?.suggestedQuestions}
+            />
+          )}
         </>
       )}
     </>

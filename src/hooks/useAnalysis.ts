@@ -8,7 +8,6 @@ import { classifySegments } from '@/services/analytics/segmentClassifier'
 import { buildAIPayload } from '@/services/analytics/summaryBuilder'
 import type { AnalysisResult } from '@/types/analysis'
 import type { Lead } from '@/types/lead'
-import { REQUIRED_COLUMNS } from '@/types/lead'
 
 export type AnalysisState = 'idle' | 'running' | 'done' | 'error'
 
@@ -18,7 +17,7 @@ export interface UseAnalysisResult {
   error: string | null
 }
 
-export function useAnalysis(leads: Lead[] | null): UseAnalysisResult {
+export function useAnalysis(leads: Lead[] | null, featureColumns: string[] = []): UseAnalysisResult {
   const [analysisState, setAnalysisState] = useState<AnalysisState>('idle')
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -45,7 +44,7 @@ export function useAnalysis(leads: Lead[] | null): UseAnalysisResult {
       const aiPayload = buildAIPayload(kpis, featureImportance)
 
       const result: AnalysisResult = {
-        dataset: { rows: leads.length, columns: [...REQUIRED_COLUMNS] },
+        dataset: { rows: leads.length, columns: featureColumns, featureColumns },
         kpis,
         featureImportance,
         leadScores,
@@ -61,7 +60,7 @@ export function useAnalysis(leads: Lead[] | null): UseAnalysisResult {
       setError(`Analytics engine error: ${message}`)
       setAnalysisState('error')
     }
-  }, [leads])
+  }, [leads, featureColumns])
 
   return { analysisState, analysisResult, error }
 }

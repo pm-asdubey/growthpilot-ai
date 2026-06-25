@@ -68,7 +68,7 @@ export interface AIRequestPayload {
 
 // The full output of the analytics pipeline.
 export interface AnalysisResult {
-  dataset: { rows: number; columns: string[] }
+  dataset: { rows: number; columns: string[]; featureColumns: string[] }
   kpis: KPISet
   featureImportance: FeatureImportance[]
   leadScores: LeadScore[]

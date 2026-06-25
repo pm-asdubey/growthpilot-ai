@@ -23,6 +23,12 @@ export function ConversionTrendChart({ data, conversionRate }: Props) {
     <ChartCard
       title="Conversion by Days Since Signup"
       description={`Overall conversion rate: ${String(conversionRate)}%`}
+      formula={[
+        'Leads are grouped into 30-day buckets by their days_since_signup value.',
+        'Each bar shows converted (green) vs not-converted (grey) counts within that bucket.',
+        'Conversion Rate = (converted ÷ total in bucket) × 100',
+        'Useful for identifying the optimal engagement window after signup.',
+      ]}
     >
       <ResponsiveContainer width="100%" height={240}>
         <BarChart data={data} margin={{ top: 0, right: 8, bottom: 0, left: -8 }}>

@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import { GrowthPilotLogo } from '@/components/common/GrowthPilotLogo'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { AvatarMenu } from '@/components/common/AvatarMenu'
 
@@ -49,12 +50,8 @@ export function Header({ onMenuToggle, isSidebarOpen }: HeaderProps) {
           </svg>
         </button>
 
-        {/* Logo + name — visible on desktop (sidebar already shows it); hidden on mobile we still show it */}
-        <div className="flex items-center gap-2 md:hidden">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-[11px] font-bold text-primary-foreground">
-            G
-          </span>
-          <span className="text-[15px] font-semibold text-foreground">GrowthPilot AI</span>
+        <div className="md:hidden">
+          <GrowthPilotLogo size="sm" />
         </div>
       </div>
 

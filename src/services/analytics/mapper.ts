@@ -1,27 +1,33 @@
 import type { Lead } from '@/types/lead'
+import { detectNumericColumns } from './validator'
 
-// Converts a validated raw PapaParse row into a strongly-typed Lead.
-// Must only be called after validateDataset() returns isValid === true,
-// guaranteeing all required columns are present.
-export function mapRowToLead(row: Record<string, string>): Lead {
-  return {
-    employees: parseFloat(row.employees),
-    trial_users: parseFloat(row.trial_users),
-    pricing_page_visits: parseFloat(row.pricing_page_visits),
-    daily_active_users: parseFloat(row.daily_active_users),
-    invited_teammates: parseFloat(row.invited_teammates),
-    webinar_attended: parseBoolean(row.webinar_attended),
-    support_tickets: parseFloat(row.support_tickets),
-    days_since_signup: parseFloat(row.days_since_signup),
-    converted: parseBoolean(row.converted),
+export function getFeatureColumns(headers: string[], rows: Record<string, string>[]): string[] {
+  return detectNumericColumns(headers, rows)
+}
+
+export function mapRowToLead(row: Record<string, string>, featureColumns: string[]): Lead {
+  const lead: Lead = { converted: parseBoolean(row.converted) }
+
+  for (const col of featureColumns) {
+    const raw = row[col].trim().toLowerCase()
+    if (raw === 'true' || raw === '1') {
+      lead[col] = true
+    } else if (raw === 'false' || raw === '0') {
+      lead[col] = 0
+    } else {
+      lead[col] = parseFloat(raw) || 0
+    }
   }
+
+  return lead
 }
 
-export function mapRowsToLeads(rows: Record<string, string>[]): Lead[] {
-  return rows.map(mapRowToLead)
+export function mapRowsToLeads(rows: Record<string, string>[], featureColumns: string[]): Lead[] {
+  return rows.map((row) => mapRowToLead(row, featureColumns))
 }
 
-function parseBoolean(value: string): boolean {
+function parseBoolean(value: string | undefined): boolean {
+  if (!value) return false
   const v = value.trim().toLowerCase()
   return v === '1' || v === 'true'
 }

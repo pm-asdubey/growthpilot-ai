@@ -2,9 +2,20 @@ import type { AIRequestPayload } from '@/types/analysis'
 import type { AnalyzeAPIResponse } from '@/types/ai'
 
 const ENDPOINT = '/api/analyze'
-const TIMEOUT_MS = 30_000
+const TIMEOUT_MS = 65_000
 
 export async function fetchInsights(payload: AIRequestPayload): Promise<AnalyzeAPIResponse> {
+  return callAnalyze({ mode: 'analyze', ...payload })
+}
+
+export async function askQuestion(
+  question: string,
+  context: AIRequestPayload,
+): Promise<AnalyzeAPIResponse> {
+  return callAnalyze({ mode: 'question', question, context })
+}
+
+async function callAnalyze(body: unknown): Promise<AnalyzeAPIResponse> {
   const controller = new AbortController()
   const timer = setTimeout(() => { controller.abort() }, TIMEOUT_MS)
 
@@ -12,12 +23,10 @@ export async function fetchInsights(payload: AIRequestPayload): Promise<AnalyzeA
     const response = await fetch(ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
       signal: controller.signal,
     })
-
     clearTimeout(timer)
-
     const json = await response.json() as AnalyzeAPIResponse
     return json
   } catch (err) {
