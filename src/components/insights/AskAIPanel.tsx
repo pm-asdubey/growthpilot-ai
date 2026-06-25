@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Loader2, Send, Sparkles } from 'lucide-react'
 import { SectionCard } from '@/components/common/SectionCard'
 import { askQuestion } from '@/services/api/analyzeService'
@@ -17,8 +17,16 @@ interface AskAIPanelProps {
 export function AskAIPanel({ context, suggestedQuestions = [] }: AskAIPanelProps) {
   const [input, setInput] = useState('')
   const [history, setHistory] = useState<QAEntry[]>([])
+  const [currentSuggestions, setCurrentSuggestions] = useState<string[]>(suggestedQuestions)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // suggestedQuestions can arrive after the panel first renders (e.g. AI
+  // insights load asynchronously) — sync them in as long as no question has
+  // been asked yet, so they don't silently get stuck on an empty initial value.
+  useEffect(() => {
+    if (history.length === 0) setCurrentSuggestions(suggestedQuestions)
+  }, [suggestedQuestions, history.length])
 
   const submit = async (question: string) => {
     const q = question.trim()
@@ -27,11 +35,19 @@ export function AskAIPanel({ context, suggestedQuestions = [] }: AskAIPanelProps
     setError(null)
     setLoading(true)
 
-    const result = await askQuestion(q, context)
+    const result = await askQuestion(q, context, history)
     setLoading(false)
 
     if (result.success && result.data && 'answer' in result.data) {
-      setHistory((h) => [...h, { question: q, answer: String((result.data as { answer: unknown }).answer) }])
+      const data = result.data
+      setHistory((h) => [...h, { question: q, answer: data.answer }])
+      // Refresh the suggestion chips with new follow-ups grounded in this answer.
+      // Fall back to remaining unused initial suggestions if the model didn't return any.
+      if (data.followUpQuestions && data.followUpQuestions.length > 0) {
+        setCurrentSuggestions(data.followUpQuestions)
+      } else {
+        setCurrentSuggestions((prev) => prev.filter((s) => s !== q))
+      }
     } else {
       setError(result.error ?? 'Something went wrong. Please retry.')
     }
@@ -48,28 +64,6 @@ export function AskAIPanel({ context, suggestedQuestions = [] }: AskAIPanelProps
       description="Ask any question about your lead dataset. The AI answers using only your analytics results."
     >
       <div className="space-y-4">
-        {/* Suggested questions */}
-        {suggestedQuestions.length > 0 && history.length === 0 && (
-          <div>
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Suggested questions
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {suggestedQuestions.map((q, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => { void submit(q) }}
-                  disabled={loading}
-                  className="rounded-full border border-border bg-background px-3 py-1.5 text-[12px] text-foreground transition-colors hover:bg-accent hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Q&A history */}
         {history.length > 0 && (
           <div className="space-y-4">
@@ -89,6 +83,28 @@ export function AskAIPanel({ context, suggestedQuestions = [] }: AskAIPanelProps
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Suggested questions — refreshed after every answer */}
+        {currentSuggestions.length > 0 && (
+          <div>
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              {history.length === 0 ? 'Suggested questions' : 'Follow-up questions'}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {currentSuggestions.map((q, i) => (
+                <button
+                  key={`${String(history.length)}-${String(i)}`}
+                  type="button"
+                  onClick={() => { void submit(q) }}
+                  disabled={loading}
+                  className="rounded-full border border-border bg-background px-3 py-1.5 text-[12px] text-foreground transition-colors hover:bg-accent hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

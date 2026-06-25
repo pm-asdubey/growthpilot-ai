@@ -29,21 +29,25 @@ function buildEntry(result: AnalysisResult, fileName: string): PersistedAnalysis
     featureColumns: result.dataset.featureColumns,
     kpis: result.kpis,
     segments: { sqlThreshold: result.segments.sqlThreshold, mqlThreshold: result.segments.mqlThreshold },
+    segmentConfig: result.segmentConfig,
     featureImportance: result.featureImportance,
     charts: result.charts,
+    categoricalBreakdown: result.categoricalBreakdown,
+    featureBuckets: result.featureBuckets,
   }
 }
 
 export function usePersistedAnalysis() {
   const [history, setHistory] = useState<PersistedAnalysis[]>(() => loadHistory())
 
-  const saveAnalysis = useCallback((result: AnalysisResult, fileName: string) => {
+  const saveAnalysis = useCallback((result: AnalysisResult, fileName: string): PersistedAnalysis => {
+    const entry = buildEntry(result, fileName)
     setHistory((prev) => {
-      const entry = buildEntry(result, fileName)
       const updated = [entry, ...prev].slice(0, MAX_HISTORY)
       saveHistory(updated)
       return updated
     })
+    return entry
   }, [])
 
   const updateAIInsights = useCallback((id: string, aiInsights: AIResponse) => {

@@ -5,17 +5,19 @@ interface SegmentBadgeProps {
   subtitle: string
   count: number
   total: number
+  totalLabel?: string   // e.g. "of open leads" instead of default "of total"
   threshold?: number
-  variant: 'sql' | 'mql' | 'nurture'
+  variant: 'converted' | 'sql' | 'mql' | 'nurture'
 }
 
 const VARIANT_STYLES: Record<SegmentBadgeProps['variant'], string> = {
-  sql:     'border-primary/20 bg-primary/5 text-primary',
-  mql:     'border-warning/20 bg-warning/5 text-warning',
-  nurture: 'border-border bg-muted text-muted-foreground',
+  converted: 'border-success/20 bg-success/5 text-success',
+  sql:       'border-primary/20 bg-primary/5 text-primary',
+  mql:       'border-warning/20 bg-warning/5 text-warning',
+  nurture:   'border-border bg-muted text-muted-foreground',
 }
 
-export function SegmentBadge({ label, subtitle, count, total, threshold, variant }: SegmentBadgeProps) {
+export function SegmentBadge({ label, subtitle, count, total, totalLabel, threshold, variant }: SegmentBadgeProps) {
   const pct = total === 0 ? 0 : Math.round((count / total) * 100)
   return (
     <div className={cn('rounded-[12px] border p-5', VARIANT_STYLES[variant])}>
@@ -23,7 +25,7 @@ export function SegmentBadge({ label, subtitle, count, total, threshold, variant
       <p className="mt-0.5 text-[11px] opacity-70">{subtitle}</p>
       <p className="mt-3 text-[32px] font-bold leading-none">{count.toLocaleString()}</p>
       <p className="mt-1.5 text-[12px] opacity-70">
-        {pct}% of total
+        {pct}% {totalLabel ?? 'of total'}
         {threshold !== undefined && threshold > 0 && <> · score ≥ {threshold}</>}
       </p>
     </div>

@@ -15,7 +15,8 @@ export const CHART_COLOURS = {
 
 // Segment colours — consistent across pie chart and badges.
 export const SEGMENT_COLOURS: Record<string, string> = {
-  SQL:     CHART_COLOURS.blue,
-  MQL:     CHART_COLOURS.amber,
-  Nurture: CHART_COLOURS.slate,
+  Converted: CHART_COLOURS.green,
+  SQL:       CHART_COLOURS.blue,
+  MQL:       CHART_COLOURS.amber,
+  Nurture:   CHART_COLOURS.slate,
 }

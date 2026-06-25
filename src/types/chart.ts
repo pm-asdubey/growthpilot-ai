@@ -11,7 +11,7 @@ export interface LeadScoreHistogramData {
 }
 
 export interface SegmentDistributionData {
-  label: 'SQL' | 'MQL' | 'Nurture'
+  label: 'Converted' | 'SQL' | 'MQL' | 'Nurture'
   count: number
 }
 

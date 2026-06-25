@@ -36,7 +36,8 @@ export function LeadScoreHistogram({ data, sqlThreshold, mqlThreshold }: Props) 
         'Each feature value is min-max normalized to 0–1 across the dataset.',
         'Score = Σ (normalized_value × feature_importance_weight) × 100',
         'Result is clamped to 0–100 and rounded to the nearest integer.',
-        'Colour coding: Blue = SQL (top 15%), Amber = MQL (next 15%), Slate = Nurture.',
+        'Every lead is scored, including already-converted ones — colour bands are an approximate guide.',
+        'Exact SQL/MQL/Nurture thresholds (shown in Lead Prioritization) apply only to open, not-yet-converted leads.',
       ]}
     >
       <ResponsiveContainer width="100%" height={240}>

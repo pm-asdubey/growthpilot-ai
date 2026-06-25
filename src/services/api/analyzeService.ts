@@ -8,11 +8,14 @@ export async function fetchInsights(payload: AIRequestPayload): Promise<AnalyzeA
   return callAnalyze({ mode: 'analyze', ...payload })
 }
 
+export interface PreviousQA { question: string; answer: string }
+
 export async function askQuestion(
   question: string,
   context: AIRequestPayload,
+  previousQA: PreviousQA[] = [],
 ): Promise<AnalyzeAPIResponse> {
-  return callAnalyze({ mode: 'question', question, context })
+  return callAnalyze({ mode: 'question', question, context, previousQA })
 }
 
 async function callAnalyze(body: unknown): Promise<AnalyzeAPIResponse> {

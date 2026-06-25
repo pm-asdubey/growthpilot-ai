@@ -17,14 +17,15 @@ export function SegmentPieChart({ data, totalLeads }: Props) {
 
   return (
     <ChartCard
-      title="SQL / MQL / Nurture"
-      description="Lead segment distribution"
+      title="Pipeline Breakdown"
+      description="Converted vs. open-pipeline priority"
       formula={[
-        'Leads are sorted by score descending.',
-        'SQL (Sales Qualified): top 15% of leads by score — score ≥ 85th percentile.',
-        'MQL (Marketing Qualified): next 15% — score between 70th and 85th percentile.',
-        'Nurture: remaining 70% — score below 70th percentile.',
-        'Thresholds are computed from your actual dataset, not fixed values.',
+        'Converted: leads that already converted — excluded from prioritization, already won.',
+        'Among the remaining OPEN leads only, sorted by score descending:',
+        'SQL: top tier (default 15%) — highest priority, call now.',
+        'MQL: next tier (default 15%) — marketing nurture candidates.',
+        'Nurture: remaining open leads — lower priority.',
+        'Percentages are configurable in Lead Prioritization settings.',
       ]}
     >
       <div className="flex items-center gap-6">

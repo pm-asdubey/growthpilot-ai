@@ -3,7 +3,8 @@ import type { ValidationError, ValidationResult } from '@/types/validation'
 
 const MAX_ROWS = 10_000
 const MAX_BYTES = 25 * 1024 * 1024
-const ACCEPTED_BOOLEAN_VALUES = new Set(['0', '1', 'true', 'false'])
+// Accept common real-world conventions for boolean columns, not just 0/1.
+const ACCEPTED_BOOLEAN_VALUES = new Set(['0', '1', 'true', 'false', 'yes', 'no', 'y', 'n'])
 
 export function validateDataset(
   headers: string[],
@@ -84,4 +85,27 @@ export function detectNumericColumns(headers: string[], rows: Record<string, str
 export function getMissingKnownColumns(headers: string[]): string[] {
   const lower = new Set(headers.map((h) => h.trim().toLowerCase()))
   return KNOWN_FEATURE_COLUMNS.filter((c) => !lower.has(c))
+}
+
+// Returns non-numeric columns that actually group leads together (Industry,
+// Region, Lead Source, Job Title — no matter how many distinct values they
+// have). Excludes only columns that are essentially unique per row (IDs, free
+// text names, timestamps), where every "group" would have ~1 member and a
+// breakdown would be meaningless. There is intentionally no upper limit on
+// distinct-value count — a column with 50 cities is still useful; capping it
+// would silently throw away real columns from larger or richer datasets.
+export function detectCategoricalColumns(headers: string[], rows: Record<string, string>[]): string[] {
+  const numericCols = new Set(detectNumericColumns(headers, rows))
+
+  return headers.filter((h) => {
+    if (h === CONVERTED_COLUMN || numericCols.has(h)) return false
+    const values = rows.map((r) => r[h].trim()).filter((v) => v.length > 0)
+    if (values.length === 0) return false
+    const distinct = new Set(values.map((v) => v.toLowerCase()))
+    if (distinct.size < 2) return false
+    // Average group size >= 2 means values actually repeat and form groups;
+    // close to 1 means every row is essentially unique (an ID/name/date column).
+    const avgGroupSize = values.length / distinct.size
+    return avgGroupSize >= 2
+  })
 }

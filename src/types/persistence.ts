@@ -1,4 +1,12 @@
-import type { ChartDataSet, FeatureImportance, KPISet, SegmentResult } from './analysis'
+import type {
+  CategoricalBreakdown,
+  ChartDataSet,
+  FeatureBucketBreakdown,
+  FeatureImportance,
+  KPISet,
+  SegmentConfig,
+  SegmentResult,
+} from './analysis'
 import type { AIResponse } from './ai'
 
 export interface PersistedAnalysis {
@@ -9,7 +17,10 @@ export interface PersistedAnalysis {
   featureColumns: string[]
   kpis: KPISet
   segments: Pick<SegmentResult, 'sqlThreshold' | 'mqlThreshold'>
+  segmentConfig: SegmentConfig
   featureImportance: FeatureImportance[]
   charts: ChartDataSet
+  categoricalBreakdown: CategoricalBreakdown[]
+  featureBuckets: FeatureBucketBreakdown[]
   aiInsights?: AIResponse        // Stored after AI call completes
 }

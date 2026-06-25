@@ -21,31 +21,21 @@ export function generateChartData(
 }
 
 function buildFeatureImportanceChart(featureImportance: FeatureImportance[]) {
-  // Already sorted descending by importance from the calculator.
-  return featureImportance.map((fi) => ({
-    feature: fi.label,
-    value: fi.importance,
-  }))
+  return featureImportance.map((fi) => ({ feature: fi.label, value: fi.importance }))
 }
 
 function buildLeadScoreHistogram(leadScores: LeadScore[]) {
-  // Initialise all 10 buckets to 0 so empty buckets still render.
   const counts = new Array<number>(10).fill(0)
-
   for (const { score } of leadScores) {
-    // Score 100 falls into the last bucket (90–100).
     const bucketIndex = Math.min(Math.floor(score / 10), 9)
     counts[bucketIndex] = (counts[bucketIndex] ?? 0) + 1
   }
-
-  return HISTOGRAM_BUCKETS.map((bucket, i) => ({
-    bucket,
-    count: counts[i] ?? 0,
-  }))
+  return HISTOGRAM_BUCKETS.map((bucket, i) => ({ bucket, count: counts[i] ?? 0 }))
 }
 
 function buildSegmentDistribution(segments: SegmentResult) {
   return [
+    { label: 'Converted' as const, count: segments.converted.length },
     { label: 'SQL' as const, count: segments.sql.length },
     { label: 'MQL' as const, count: segments.mql.length },
     { label: 'Nurture' as const, count: segments.nurture.length },

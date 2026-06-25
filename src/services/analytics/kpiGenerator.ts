@@ -13,6 +13,7 @@ export function generateKPIs(
   return {
     totalLeads: conversion.totalLeads,
     convertedLeads: conversion.convertedLeads,
+    openLeads: conversion.totalLeads - conversion.convertedLeads,
     conversionRate: conversion.conversionRate,
     averageLeadScore,
     sqlCount: segments.sql.length,

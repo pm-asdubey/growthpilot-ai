@@ -7,8 +7,13 @@ export interface AIResponse {
   suggestedQuestions?: string[]
 }
 
+export interface QAAnswer {
+  answer: string
+  followUpQuestions?: string[]
+}
+
 export interface AnalyzeAPIResponse {
   success: boolean
-  data?: AIResponse | { answer: string }
+  data?: AIResponse | QAAnswer
   error?: string
 }
