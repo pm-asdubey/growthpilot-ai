@@ -1,8 +1,8 @@
 import type { Handler } from '@netlify/functions'
 
 const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions'
-const MODEL = 'meta/llama-3.3-70b-instruct'
-const TIMEOUT_MS = 25_000
+const MODEL = 'meta/llama-3.1-8b-instruct'
+const TIMEOUT_MS = 20_000
 
 const SYSTEM_PROMPT = `You are an expert Marketing Operations analyst. You receive structured analytics data from a lead intelligence platform and produce concise, actionable business insights.
 
