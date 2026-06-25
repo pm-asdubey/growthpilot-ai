@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local environment — never commit real keys
+.env
+.env.local
+.env.*.local
+
+# Vite / TypeScript build cache
+node_modules/.tmp/
+*.tsbuildinfo
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Netlify
+.netlify/
