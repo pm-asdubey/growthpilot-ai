@@ -12,10 +12,28 @@ interface MetricCardProps {
   value: string
   trend?: Trend
   icon?: LucideIcon
+  isLoading?: boolean
   className?: string
 }
 
-export function MetricCard({ title, value, trend, icon: Icon, className }: MetricCardProps) {
+export function MetricCard({ title, value, trend, icon: Icon, isLoading, className }: MetricCardProps) {
+  if (isLoading) {
+    return (
+      <div
+        className={cn('rounded-[12px] border border-border bg-card p-6 animate-pulse', className)}
+        aria-busy="true"
+        aria-label={`${title} loading`}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="h-3 w-24 rounded bg-muted" />
+          <div className="h-8 w-8 rounded-lg bg-muted" />
+        </div>
+        <div className="mt-3 h-8 w-28 rounded bg-muted" />
+        <div className="mt-4 h-3 w-32 rounded bg-muted" />
+      </div>
+    )
+  }
+
   const trendColour =
     trend?.direction === 'up'
       ? 'text-success'
@@ -26,7 +44,7 @@ export function MetricCard({ title, value, trend, icon: Icon, className }: Metri
   return (
     <div
       className={cn(
-        'group rounded-[12px] border border-border bg-card p-6',
+        'rounded-[12px] border border-border bg-card p-6',
         'transition-shadow duration-150 hover:shadow-md',
         className,
       )}

@@ -1,5 +1,6 @@
 import { GitMerge, Share2, Users } from 'lucide-react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { DashboardPage } from '@/pages/Dashboard'
 import { LeadIntelligencePage } from '@/pages/LeadIntelligence'
@@ -9,6 +10,7 @@ import { SettingsPage } from '@/pages/Settings'
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" richColors closeButton />
       <Routes>
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />

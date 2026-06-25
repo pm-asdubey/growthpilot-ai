@@ -7,7 +7,7 @@ import prettierConfig from 'eslint-config-prettier'
 
 export default tseslint.config(
   // Files to ignore entirely
-  { ignores: ['dist', 'node_modules'] },
+  { ignores: ['dist', 'node_modules', '.netlify'] },
 
   // Base JS rules for all files
   js.configs.recommended,

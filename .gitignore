@@ -24,3 +24,4 @@ Thumbs.db
 
 # Netlify
 .netlify/
+deno.lock
