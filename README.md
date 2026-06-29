@@ -6,311 +6,216 @@
 
 ## Overview
 
-GrowthPilot AI is an AI-assisted analytics platform designed to help Marketing Operations teams identify high-quality leads from historical marketing data.
+GrowthPilot AI is a browser-based analytics platform that transforms historical lead CSV exports into actionable sales intelligence. All statistical analysis runs deterministically on the frontend. AI (NVIDIA NIM) is used exclusively to interpret pre-computed results and generate executive summaries — it never performs calculations and never receives raw customer data.
 
-Instead of manually analyzing spreadsheets, GrowthPilot AI automatically performs statistical analysis on uploaded lead datasets and generates executive-ready business insights using Large Language Models (LLMs).
-
-The MVP focuses on **Lead Intelligence**, while the platform architecture is intentionally designed to support additional analytics modules such as Funnel Analytics, Attribution Analysis, Customer Segmentation, and Churn Prediction.
+The MVP delivers the **Lead Intelligence** module in full. Three additional modules are present in the application as Coming Soon. Churn Prediction is shown on the Dashboard roadmap.
 
 ---
 
-# Product Vision
+## What's Built
 
-Marketing Operations teams spend significant time answering questions such as:
+### Lead Intelligence
 
-* Which leads should Sales prioritize?
-* Which customer behaviors best predict conversion?
-* Which factors contribute most to becoming a paying customer?
-* How should Marketing Qualified Leads (MQLs) and Sales Qualified Leads (SQLs) be classified?
-* How can these findings be communicated to business stakeholders?
+**Upload & Validation**
+- Drag-and-drop or file picker CSV upload
+- Full validation: required columns, data types, duplicate headers, empty files
+- Inline field-level error reporting with a live validation checklist
 
-GrowthPilot AI transforms raw CSV exports into interactive dashboards and AI-generated executive summaries in minutes.
+**Analytics Engine — entirely client-side and deterministic**
 
----
+- **Feature Importance** — min-max normalizes every column across the full dataset before comparing converted vs non-converted lead means. This prevents large-scale features (e.g. `employees`: 5–3,500) from dominating binary signals (e.g. `webinar_attended`: 0/1) purely because of unit scale.
+- **Lead Scoring** — every lead scored 0–100 using feature importance as weights.
+- **Learned Segment Thresholds** — SQL and MQL cutoffs are derived from where historical converters actually scored, not a fixed percentile. If historical winners clustered above score 60, that becomes the SQL floor for open leads.
+- **Score Spread Detection** — when all open leads score identically (no signal in the data), all route to Nurture rather than produce a misleading priority queue.
+- **ICP Detection** — identifies the trait ranges (trial users, daily active users, pricing page visits) that historically correlate with the highest conversion rates.
+- **Categorical Breakdown** — per-value conversion rates and SQL rates for text columns (Industry, Region, Lead Source, etc.)
+- **Feature Buckets** — same analysis across value ranges for numeric columns.
+- **KPI Generation** — total leads, converted, conversion rate, average lead score, SQL/MQL/Nurture counts.
 
-# Core Philosophy
+**Segment Settings**
+- Customizable SQL and MQL percentile thresholds via a settings popover.
+- Changes re-classify the full dataset instantly without re-upload.
 
-GrowthPilot AI separates **analytics** from **artificial intelligence**.
+**AI Executive Summary**
+- Structured analytics summary (no raw rows) sent to NVIDIA NIM (`meta/llama-3.1-8b-instruct`).
+- Returns: executive summary, key findings, recommendations, risks, next actions, suggested follow-up questions.
+- System prompt instructs the model to lead with business insight and pattern recognition — not isolated statistics.
+- AI insights cached in localStorage per analysis. NVIDIA is called once per analysis, not on every view.
 
-The application performs all statistical calculations locally using deterministic algorithms.
+**Ask AI — Conversational Analysis**
+- After the executive summary loads, users ask follow-up questions about their specific dataset.
+- Full conversation history sent with each request for coherent multi-turn dialogue.
+- AI returns an answer plus 3–4 suggested follow-up question chips.
+- Uses the same `/api/analyze` endpoint with `mode: 'question'`.
 
-Artificial Intelligence is used only to:
+**Analysis History**
+- Every completed analysis is automatically saved to localStorage.
+- Dashboard shows history: file name, lead count, conversion rate, SQL/MQL counts, relative timestamp.
+- Clicking any history entry reloads the full analysis without re-upload or re-computation.
+- AI insights cached per entry — no duplicate API calls on revisit.
 
-* Interpret analytical results
-* Generate executive summaries
-* Explain findings
-* Recommend business actions
+**Download**
+- Export categorized leads as CSV with SQL/MQL/Nurture classification appended.
 
-The AI **never performs calculations** and **never receives raw CSV data**.
+### Dashboard
 
-This architecture improves:
+- KPI summary from the latest analysis.
+- Clickable recent analysis history.
+- Coming Soon module grid: Funnel Analysis, Attribution Analysis, Segmentation, Churn Prediction.
 
-* Trust
-* Explainability
-* Consistency
-* Cost efficiency
+### Coming Soon Pages
 
----
-
-# MVP Scope
-
-The first release implements one fully functional module.
-
-## ✅ Lead Intelligence
-
-Features include:
-
-* CSV Upload
-* Dataset Validation
-* Historical Conversion Analysis
-* Feature Importance Analysis
-* Explainable Lead Scoring
-* SQL / MQL Classification
-* Interactive Dashboards
-* AI Executive Summary
-* Business Recommendations
-* Exportable Report
-
----
-
-## 🚧 Future Modules
-
-The application has been architected to support additional analytics capabilities.
-
-Planned modules include:
-
-* Funnel Analytics
-* Attribution Analysis
-* Customer Segmentation
-* Churn Prediction
-* Revenue Intelligence
-* Campaign Analytics
-
-These modules intentionally appear within the application as **Coming Soon** to communicate the long-term product vision.
+Each module has a dedicated page with description and full capability list:
+- Funnel Analysis
+- Attribution Analysis
+- Segmentation
+- Churn Prediction (Dashboard grid)
 
 ---
 
-# Product Workflow
+## Technology Stack
 
-```text
-Dashboard
+| Layer | Technology |
+|---|---|
+| Frontend | React 18 + TypeScript + Vite |
+| Styling | Tailwind CSS + shadcn/ui |
+| Charts | Recharts |
+| CSV Parsing | PapaParse |
+| Backend | Netlify Functions — single function `analyze.ts` |
+| AI | NVIDIA NIM — `meta/llama-3.1-8b-instruct` |
+| Persistence | localStorage (no database) |
+| Deployment | Netlify |
 
-↓
+---
 
-Lead Intelligence
+## Analytics Engine — Module Map
 
-↓
+```
+src/services/analytics/
 
-Upload Historical Lead Dataset (.csv)
-
-↓
-
-Dataset Validation
-
-↓
-
-Deterministic Analytics Engine
-
-↓
-
-Generate Business Metrics
-
-↓
-
-Generate Structured JSON Summary
-
-↓
-
-AI Insight Engine
-
-↓
-
-Interactive Dashboard
-
-↓
-
-Executive Summary
-
-↓
-
-Recommendations
-
-↓
-
-Download Report
+├── validator.ts                    — Column presence, types, encoding, duplicates
+├── mapper.ts                       — PapaParse rows → typed Lead[]
+├── conversionCalculator.ts         — Conversion rate, converted/open split
+├── featureImportanceCalculator.ts  — Min-max normalized mean-diff importance
+├── leadScoreCalculator.ts          — Weighted 0–100 score per lead
+├── segmentClassifier.ts            — Learned SQL/MQL thresholds + spread detection
+├── kpiGenerator.ts                 — KPI set (totals, rates, averages)
+├── chartDataGenerator.ts           — Chart-ready data structures for Recharts
+├── summaryBuilder.ts               — Builds AIRequestPayload (no raw CSV)
+├── categoricalAnalyzer.ts          — Per-value rates for text columns
+└── featureBucketAnalyzer.ts        — Range-based rates for numeric columns
 ```
 
 ---
 
-# Technology Stack
+## API
 
-## Frontend
+Single Netlify Function: `netlify/functions/analyze.ts`
 
-* React
-* TypeScript
-* Vite
-* Tailwind CSS
-* shadcn/ui
+**Endpoint:** `POST /api/analyze`
 
-## Data Processing
+**`mode: 'analyze'`** — Generate executive summary. Receives analytics payload. Returns `executiveSummary`, `keyFindings`, `recommendations`, `risks`, `nextActions`, `suggestedQuestions`.
 
-* PapaParse
-* Native TypeScript Analytics Engine
+**`mode: 'question'`** — Conversational follow-up. Receives question + context + previous Q&A history. Returns `answer` and `followUpQuestions`.
 
-## Visualizations
-
-* Recharts
-
-## Backend
-
-* Netlify Functions
-
-## AI
-
-* NVIDIA Inference API
-
-## Deployment
-
-* Netlify
-
-## Version Control
-
-* Git + GitHub
+Both modes never receive raw CSV rows. Timeout: 60 seconds.
 
 ---
 
-# Repository Structure
+## Required CSV Columns
 
-```text
+| Column | Type |
+|---|---|
+| `employees` | Number |
+| `trial_users` | Number |
+| `pricing_page_visits` | Number |
+| `daily_active_users` | Number |
+| `invited_teammates` | Number |
+| `webinar_attended` | 0 or 1 |
+| `support_tickets` | Number |
+| `days_since_signup` | Number |
+| `converted` | 0 or 1 |
+
+Optional columns (company name, industry, region, lead source) are used for categorical breakdown when present. Unknown columns are ignored. Maximum: 10,000 rows / 25 MB.
+
+---
+
+## Project Structure
+
+```
 growthpilot-ai/
 
 ├── README.md
 ├── CLAUDE.md
-├── PROMPTS.md
+├── DECISIONS.md
 ├── DATASETS.md
+├── PROJECT_CONTEXT.md
+├── PROJECT_STATE.md
+├── CURRENT_PHASE.md
 
 ├── docs/
 │   ├── PRD.md
 │   ├── ARCHITECTURE.md
+│   ├── TECHNICAL_DESIGN.md
 │   ├── IMPLEMENTATION_PLAN.md
 │   └── UI_UX_GUIDELINES.md
 
 ├── src/
-│   ├── assets/
 │   ├── components/
+│   │   ├── charts/         — ChartCard, FeatureImportanceChart, LeadScoreHistogram, ConversionTrendChart
+│   │   ├── common/         — MetricCard, EmptyState, FormulaTooltip, SegmentBadge, RecentAnalysisCard
+│   │   ├── insights/       — AIInsightsPanel, AskAIPanel, ICPProfileCard, TopLeadsTable,
+│   │   │                     BreakdownTable, DownloadLeadsButton, SegmentSettingsPopover
+│   │   ├── layout/         — AppLayout, Header, Sidebar
+│   │   ├── ui/             — shadcn/ui primitives
+│   │   └── upload/         — CSVDropzone, ValidationChecklist, ValidationErrorPanel
 │   ├── hooks/
+│   │   ├── useAnalysis.ts           — Orchestrates full analytics pipeline
+│   │   ├── useAIInsights.ts         — Manages AI fetch lifecycle
+│   │   ├── useCSVUpload.ts          — Upload, parsing, validation state
+│   │   └── usePersistedAnalysis.ts  — localStorage read/write for history
 │   ├── pages/
+│   │   ├── Dashboard/
+│   │   ├── LeadIntelligence/        — Upload → Validation → AnalysisResults
+│   │   ├── ComingSoon/
+│   │   └── Settings/
 │   ├── services/
-│   ├── types/
-│   └── utils/
+│   │   ├── analytics/               — All 11 analytics calculators
+│   │   └── api/analyzeService.ts    — Netlify function client
+│   ├── types/                       — Lead, AnalysisResult, AIResponse, etc.
+│   └── utils/                       — percentile.ts, formatting.ts
 
-├── public/
+├── netlify/
+│   └── functions/
+│       └── analyze.ts               — AI proxy (analyze + question modes)
 
-└── netlify/
-    └── functions/
+└── public/
 ```
 
 ---
 
-# Documentation
+## Privacy & Security
 
-The project is documented in detail to support AI-assisted development.
-
-| Document                 | Purpose                                         |
-| ------------------------ | ----------------------------------------------- |
-| `PRD.md`                 | Product requirements and business context       |
-| `ARCHITECTURE.md`        | Technical architecture and data flow            |
-| `IMPLEMENTATION_PLAN.md` | Development phases and milestones               |
-| `UI_UX_GUIDELINES.md`    | Design system and user experience               |
-| `CLAUDE.md`              | Development guidelines for Claude Code          |
-| `PROMPTS.md`             | Reusable prompts for AI-assisted implementation |
-| `DATASETS.md`            | Dataset schemas and validation rules            |
+- No uploaded CSV is stored server-side or transmitted to AI.
+- Only structured analytics summaries reach NVIDIA NIM.
+- NVIDIA API key lives exclusively in Netlify environment variables.
+- No authentication, no database, no persistent server-side state.
+- All customer data remains in the browser session only.
 
 ---
 
-# Development Principles
+## Upcoming Modules
 
-This project follows several engineering principles.
-
-## Build Incrementally
-
-Features should be implemented in small, reviewable phases.
-
----
-
-## Reusable Components
-
-UI components should be modular and reusable wherever possible.
+| Module | Status |
+|---|---|
+| Lead Intelligence | ✅ Complete |
+| Funnel Analysis | 🚧 Coming Soon |
+| Attribution Analysis | 🚧 Coming Soon |
+| Segmentation | 🚧 Coming Soon |
+| Churn Prediction | 📋 Planned |
 
 ---
 
-## Type Safety
+## License
 
-Avoid the `any` type.
-
-Prefer strict TypeScript interfaces.
-
----
-
-## Explainable Analytics
-
-Every metric should be reproducible.
-
-Business recommendations must always reference measurable data.
-
----
-
-## AI-Assisted Development
-
-Artificial Intelligence should accelerate development without replacing engineering judgment.
-
-Developers are expected to:
-
-* Review generated code
-* Refactor duplicated logic
-* Validate outputs
-* Test functionality
-* Maintain clean architecture
-
----
-
-# Non-Goals
-
-The MVP intentionally excludes:
-
-* Authentication
-* Database
-* CRM Integrations
-* Multi-user Workspaces
-* Billing
-* Real-time Analytics
-* Scheduled Reports
-* Marketing Campaign Execution
-
-These capabilities belong to future releases.
-
----
-
-# Long-Term Vision
-
-GrowthPilot AI aims to become an AI-native analytics workspace for Marketing Operations teams.
-
-Future versions will provide a unified environment for:
-
-* Lead Intelligence
-* Funnel Optimization
-* Attribution Modeling
-* Customer Segmentation
-* Revenue Analytics
-* Predictive Insights
-* AI-powered Business Recommendations
-
-The long-term objective is to help Marketing teams make faster, data-driven decisions while reducing reliance on spreadsheets and manual analysis.
-
----
-
-# License
-
-This project is intended as a portfolio and demonstration application showcasing AI-assisted product development, analytics workflows, and modern frontend engineering practices.
-
-It is not affiliated with or endorsed by any commercial marketing automation platform.
+Portfolio and demonstration application showcasing AI-assisted product development, analytics engineering, and modern frontend architecture. Not affiliated with any commercial marketing automation platform.

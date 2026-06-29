@@ -1,601 +1,220 @@
-# ARCHITECTURE.md
-
-# Technical Architecture
+# Architecture
 
 ## GrowthPilot AI
 
-Version 1.0
+Version 2.0 — reflects implemented MVP
 
 ---
 
-# Purpose
+## High-Level Architecture
 
-This document defines the technical architecture for GrowthPilot AI.
-
-Its purpose is to ensure that every implementation follows a consistent structure, remains modular, and is easy to extend.
-
-The MVP only implements the **Lead Intelligence** module, but the architecture should allow future analytics modules without major refactoring.
-
----
-
-# High-Level Architecture
-
-```text
-                    Browser
-
-                       │
-
-             React + TypeScript
-
-                       │
-
-        ┌──────────────┴──────────────┐
-
-        │                             │
-
- Analytics Engine              UI Components
-
-        │                             │
-
-        └──────────────┬──────────────┘
-
-                       │
-
-               Summary JSON
-
-                       │
-
-                       ▼
-
-            Netlify Function (/api/analyze)
-
-                       │
-
-                       ▼
-
-               NVIDIA Inference API
-
-                       │
-
-                       ▼
-
-             AI Generated Insights
-
-                       │
-
-                       ▼
-
-                  React Dashboard
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                          Browser (React SPA)                     │
+│                                                                   │
+│  ┌──────────────┐    ┌──────────────┐    ┌───────────────────┐  │
+│  │  Presentation │    │   Business   │    │  Analytics Engine  │  │
+│  │    Layer      │◄──►│    Layer     │◄──►│   (Pure TS)       │  │
+│  │  (Components) │    │  (Hooks)     │    │  (No UI)          │  │
+│  └──────────────┘    └──────────────┘    └───────────────────┘  │
+│                              │                                    │
+│                              │  Structured JSON (no raw CSV)     │
+│                              ▼                                    │
+│                     ┌──────────────┐                             │
+│                     │  API Service  │                             │
+│                     └──────────────┘                             │
+└──────────────────────────────┬──────────────────────────────────┘
+                                │ POST /api/analyze
+                                ▼
+                   ┌─────────────────────────┐
+                   │   Netlify Function       │
+                   │   analyze.ts             │
+                   └────────────┬────────────┘
+                                │
+                                ▼
+                   ┌─────────────────────────┐
+                   │   NVIDIA NIM             │
+                   │   meta/llama-3.1-8b-     │
+                   │   instruct               │
+                   └────────────┬────────────┘
+                                │
+                                ▼
+                   ┌─────────────────────────┐
+                   │   AI Response JSON       │
+                   └─────────────────────────┘
 ```
 
 ---
 
-# Architectural Principles
+## Architectural Principles
 
-The project follows these principles:
+### 1. Separation of Concerns
 
-## 1. Separation of Concerns
+Analytics → AI Interpretation → Presentation are strictly independent layers. No component performs multiple responsibilities.
 
-Analytics
+### 2. Deterministic Analytics
 
-↓
+Every metric is reproducible. The frontend performs all mathematical analysis. AI never calculates — it only interprets pre-computed results.
 
-AI Interpretation
+### 3. Thin Backend
 
-↓
+The Netlify function does exactly three things: receive structured JSON, call NVIDIA, return the response. No business logic, no storage, no calculations.
 
-Presentation
+### 4. AI as Augmentation
 
-must remain independent.
-
-No component should perform multiple responsibilities.
+AI enhances analytics. It never replaces them. The dashboard is fully functional if AI is unavailable.
 
 ---
 
-## 2. Deterministic Analytics
+## Data Flow
 
-Every business metric must be reproducible.
+```
+User uploads CSV
+      │
+      ▼
+PapaParse → raw string rows
+      │
+      ▼
+validator.ts → ValidationResult (pass/fail + error list)
+      │ (fail → stop, show errors)
+      ▼
+mapper.ts → Lead[] (typed objects)
+      │
+      ▼
+Analytics Engine (all modules run in sequence)
+  ├── conversionCalculator     → conversionRate, converted/open counts
+  ├── featureImportanceCalc    → FeatureImportance[] (min-max normalized)
+  ├── leadScoreCalculator      → LeadScore[] (0–100 per lead)
+  ├── segmentClassifier        → sql[], mql[], nurture[], learned thresholds
+  ├── kpiGenerator             → KPISet
+  ├── chartDataGenerator       → ChartDataSet
+  ├── categoricalAnalyzer      → per-value breakdown for text columns
+  └── featureBucketAnalyzer    → range breakdown for numeric columns
+      │
+      ▼
+summaryBuilder → AIRequestPayload (aggregates only, no raw rows)
+      │
+      ├── Display dashboard immediately (no AI dependency)
+      │
+      └── analyzeService.fetchInsights() → POST /api/analyze
+            │
+            ▼
+      Netlify Function → NVIDIA NIM
+            │
+            ▼
+      AIResponse (executiveSummary, keyFindings, recommendations,
+                  risks, nextActions, suggestedQuestions)
+            │
+            ▼
+      Cached in localStorage → displayed in AIInsightsPanel
 
-The frontend performs all mathematical analysis.
-
-The backend never calculates metrics.
-
-The AI never calculates metrics.
-
----
-
-## 3. Thin Backend
-
-The backend only:
-
-* receives summary JSON
-* calls NVIDIA
-* returns AI response
-
-Nothing else.
-
----
-
-## 4. AI Augmentation
-
-Artificial Intelligence enhances analytics.
-
-It never replaces analytics.
-
----
-
-# Project Structure
-
-```text
-growthpilot-ai/
-
-src/
-
-├── assets/
-
-├── components/
-
-│      ├── charts/
-
-│      ├── common/
-
-│      ├── dashboard/
-
-│      ├── upload/
-
-│      └── insights/
-
-├── hooks/
-
-├── pages/
-
-│      ├── Dashboard/
-
-│      ├── LeadIntelligence/
-
-│      ├── Attribution/
-
-│      ├── Funnel/
-
-│      └── Segmentation/
-
-├── services/
-
-│      ├── analytics/
-
-│      ├── ai/
-
-│      ├── csv/
-
-│      └── api/
-
-├── types/
-
-├── utils/
-
-└── App.tsx
-
-netlify/
-
-functions/
-
-analyze.ts
+Ask AI (after summary loads):
+      User question + context + conversation history
+            │
+            ▼
+      POST /api/analyze (mode: 'question')
+            │
+            ▼
+      answer + followUpQuestions → AskAIPanel
 ```
 
 ---
 
-# Application Layers
+## Application Layers
 
-The application consists of five layers.
+### Presentation Layer
 
-```text
-Presentation Layer
+Pages, components, charts, tables, forms, navigation. No calculations. No direct API calls.
 
-↓
+Files: `src/components/`, `src/pages/`
 
-Business Layer
+### Business Layer
 
-↓
+Orchestrates workflow, manages state, calls services, transforms data.
 
-Analytics Layer
+Files: `src/hooks/useAnalysis.ts`, `useCSVUpload.ts`, `useAIInsights.ts`, `usePersistedAnalysis.ts`
 
-↓
+### Analytics Layer
 
-API Layer
+Pure TypeScript — no UI, no side effects. Every function is deterministic and independently testable.
 
-↓
+Files: `src/services/analytics/`
 
-AI Layer
-```
+### API Layer
 
----
+Sends structured payload to Netlify. Handles timeout and error normalization.
 
-# Presentation Layer
+Files: `src/services/api/analyzeService.ts`
 
-Responsible for:
+### AI Layer (server-side)
 
-* Pages
-* Components
-* Charts
-* Tables
-* Forms
-* Navigation
+NVIDIA NIM receives structured analytics JSON. Returns interpreted insights. Two modes: `analyze` (executive summary) and `question` (conversational follow-up).
 
-No calculations should exist here.
+Files: `netlify/functions/analyze.ts`
 
 ---
 
-# Business Layer
+## Analytics Engine — Complete Module List
 
-Responsible for:
-
-* Orchestrating workflow
-* Calling services
-* Managing state
-* Transforming data
-
----
-
-# Analytics Layer
-
-Responsible for:
-
-* Statistical calculations
-* Lead scoring
-* Classification
-* Feature importance
-
-This is the heart of the application.
-
-No UI should exist here.
+| Module | Responsibility |
+|---|---|
+| `validator.ts` | Required columns, data types, duplicate headers, empty files |
+| `mapper.ts` | PapaParse output → typed `Lead[]` |
+| `conversionCalculator.ts` | Conversion rate, converted/open split |
+| `featureImportanceCalculator.ts` | Min-max normalized mean-diff importance ranking |
+| `leadScoreCalculator.ts` | Weighted 0–100 score per lead |
+| `segmentClassifier.ts` | Learned SQL/MQL thresholds + score spread detection |
+| `kpiGenerator.ts` | KPI set: totals, counts, rates, averages |
+| `chartDataGenerator.ts` | Recharts-ready data for all chart types |
+| `summaryBuilder.ts` | Constructs `AIRequestPayload` (no raw rows) |
+| `categoricalAnalyzer.ts` | Per-value conversion rate and SQL rate for text columns |
+| `featureBucketAnalyzer.ts` | Range-based rates for numeric columns |
 
 ---
 
-# API Layer
+## State Management
 
-Responsible for:
-
-Sending summary JSON to Netlify.
-
-Receiving AI response.
-
-Nothing else.
+React state via hooks. No global store. `usePersistedAnalysis` syncs analysis history and cached AI insights to localStorage. No Context API required in MVP.
 
 ---
 
-# AI Layer
+## Error Handling
 
-Responsible only for:
-
-* Executive Summary
-* Recommendations
-* Risks
-* Business Insights
-
----
-
-# Analytics Engine
-
-The Analytics Engine consists of small, focused calculators.
-
-```text
-AnalyticsEngine
-
-│
-
-├── DatasetValidator
-
-├── ConversionCalculator
-
-├── FeatureImportanceCalculator
-
-├── LeadScoreCalculator
-
-├── SegmentCalculator
-
-├── ConfidenceCalculator
-
-└── ReportGenerator
-```
-
-Each calculator has a single responsibility.
+| Scenario | Behaviour |
+|---|---|
+| Invalid CSV | Validation stops; errors shown inline |
+| Missing required column | Named in error message |
+| AI timeout (60s) | Retry button shown; analytics unaffected |
+| AI unavailable | Graceful degradation; dashboard still functional |
+| Network failure | Error toast; retry option |
+| No score spread | All open leads routed to Nurture |
 
 ---
 
-# Data Flow
+## Performance
 
-```text
-CSV Upload
-
-↓
-
-PapaParse
-
-↓
-
-JavaScript Objects
-
-↓
-
-Dataset Validation
-
-↓
-
-Analytics Engine
-
-↓
-
-Summary JSON
-
-↓
-
-Netlify Function
-
-↓
-
-NVIDIA API
-
-↓
-
-Executive Summary
-
-↓
-
-Dashboard
-```
+- Analyze datasets up to 10,000 rows in under 2 seconds (client-side).
+- AI insights cached — NVIDIA called once per analysis.
+- `useMemo` on expensive analytics computations.
+- Recharts renders lazily.
 
 ---
 
-# Dataset Validation
+## Security
 
-Validation occurs before analysis.
-
-Checks include:
-
-* Empty file
-* Invalid CSV
-* Missing required columns
-* Duplicate columns
-* Invalid data types
-* Missing values
-
-If validation fails:
-
-Analysis stops immediately.
+- NVIDIA API key in Netlify environment variables only — never in the browser bundle.
+- No raw customer data transmitted to any server.
+- No authentication required (single-user, session-local).
+- No persistent server-side state.
 
 ---
 
-# Analytics Pipeline
-
-Each uploaded dataset follows the same sequence.
-
-```
-Validate Dataset
-
-↓
-
-Calculate Conversion Rate
-
-↓
-
-Calculate Feature Importance
-
-↓
-
-Generate Lead Scores
-
-↓
-
-Determine SQL Threshold
-
-↓
-
-Determine MQL Threshold
-
-↓
-
-Generate KPIs
-
-↓
-
-Generate Charts
-
-↓
-
-Generate Summary JSON
-```
-
----
-
-# Summary JSON Contract
-
-The frontend sends structured analytics.
-
-Example:
-
-```json
-{
-  "dataset": {
-    "rows": 1200,
-    "conversionRate": 18.4
-  },
-  "featureImportance": [
-    {
-      "feature": "pricing_page_visits",
-      "importance": 0.42
-    }
-  ],
-  "segments": {
-    "sql": 180,
-    "mql": 220
-  }
-}
-```
-
-Raw CSV data must never be sent.
-
----
-
-# Netlify Function
-
-Endpoint:
-
-```
-POST /api/analyze
-```
-
-Responsibilities:
-
-* Validate request
-* Call NVIDIA API
-* Return AI summary
-
-No calculations.
-
-No business logic.
-
----
-
-# AI Prompt
-
-The AI receives only structured analytics.
-
-Expected response:
-
-* Executive Summary
-* Key Findings
-* Recommendations
-* Risks
-* Suggested Next Actions
-
----
-
-# State Management
-
-Use React state where possible.
-
-Avoid unnecessary global state.
-
-Introduce Context only when multiple pages require shared information.
-
----
-
-# Error Handling
-
-Support:
-
-* Invalid CSV
-* Empty datasets
-* API failures
-* Timeout
-* Missing AI response
-* Network failure
-
-Each error should have a user-friendly message.
-
----
-
-# Performance
-
-Goals:
-
-* Analyze datasets under 10,000 rows in under 2 seconds.
-* Avoid unnecessary re-renders.
-* Memoize expensive calculations.
-* Lazy load heavy components where appropriate.
-
----
-
-# Security
-
-* Never expose NVIDIA API keys.
-* Use environment variables.
-* Perform AI requests only through Netlify Functions.
-* Never send raw customer data to AI.
-
----
-
-# Coding Standards
-
-* Functional Components
-* TypeScript Strict Mode
-* Small reusable components
-* Pure utility functions
-* Consistent naming
-* Avoid duplicate logic
-
----
-
-# Git Workflow
-
-Each feature should follow:
-
-```
-Implement
-
-↓
-
-Run Build
-
-↓
-
-Run TypeScript Check
-
-↓
-
-Review
-
-↓
-
-Commit
-
-↓
-
-Push
-```
-
-Commit messages should follow Conventional Commits.
-
-Examples:
-
-```
-feat: implement CSV upload
-
-feat: add analytics engine
-
-feat: integrate NVIDIA AI
-
-fix: improve validation
-
-refactor: simplify lead scoring service
-```
-
----
-
-# Extensibility
-
-Although only Lead Intelligence is implemented today, the architecture should support future modules without changing the existing analytics pipeline.
-
-Future modules:
-
-* Funnel Analytics
-* Attribution
-* Segmentation
-* Churn Prediction
-
-These should reuse the same UI framework, API layer, and AI interpretation workflow.
-
----
-
-# Definition of Done
-
-A feature is complete only if:
-
-* Product requirements are satisfied.
-* UI matches design guidelines.
-* Code is modular.
-* TypeScript passes.
-* Build succeeds.
-* Error states are handled.
-* Documentation remains accurate.
-* Code is ready for production review.
+## Extensibility
+
+Future modules (Funnel, Attribution, Segmentation, Churn Prediction) can reuse:
+- The same AppLayout, Sidebar, and routing pattern.
+- The same AI proxy endpoint (new mode value).
+- The same localStorage persistence hook.
+- The same validation and mapper infrastructure.
+
+Each new module adds a new analytics service directory and a new page — no existing code needs to change.
